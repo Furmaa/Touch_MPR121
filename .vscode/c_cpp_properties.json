@@ -4,7 +4,7 @@
             "name": "Win32",
             "includePath": [
                 "C:\\Program Files (x86)\\Arduino\\tools\\**",
-                "C:\\Users\\User\\Documents\\Aron\\IZM\\Touch_MPR121\\Adafruit_MPR121",
+                "C:\\Users\\User\\Documents\\Aron\\IZM\\Touch_MPR121\\Adafruit_MPR121_mod",
                 "C:\\Program Files (x86)\\Arduino\\hardware\\arduino\\avr\\**"
             ],
             "forcedInclude": [
