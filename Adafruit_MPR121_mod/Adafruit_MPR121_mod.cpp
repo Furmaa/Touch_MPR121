@@ -26,7 +26,7 @@
  *  BSD license, all text here must be included in any redistribution.
  */
 
-#include "Adafruit_MPR121.h"
+#include "Adafruit_MPR121_mod.h"
 
 // uncomment to use autoconfig !
 //#define AUTOCONFIG // use autoconfig (Yes it works pretty well!)
@@ -79,19 +79,21 @@ boolean Adafruit_MPR121::init( uint8_t touchThreshold,
   // writeRegister(MPR121_ECR, 0x0); unneeded! 
 
   setThresholds(touchThreshold, releaseThreshold);
-  writeRegister(MPR121_MHDR, 0x01);
-  writeRegister(MPR121_NHDR, 0x05);
-  writeRegister(MPR121_NCLR, 0x01);
-  writeRegister(MPR121_FDLR, 0x00);
+  writeRegister(MPR121_MHDR, 0x01); ///< Maximum Half Delta Rising, value 1-63: largest magnitude passing through
+  writeRegister(MPR121_NHDR, 0x05); ///< Noise Half Delta Rising, value 1-63: incremental for non-noise drift
+  writeRegister(MPR121_NCLR, 0x01); ///< Noise Count Limit Rising, value 0-255: number of samples consecutively greater than MHDR
+  writeRegister(MPR121_FDLR, 0x00); ///< Filter Delay Count Limit Rising, value 0-255: operation rate of filter, 0: fastest, 255: slowest
 
-  writeRegister(MPR121_MHDF, 0x06);
-  writeRegister(MPR121_NHDF, 0x05);
+  writeRegister(MPR121_MHDF, 0x06); ///< Maximum Half Delta Falling, value 1-63: largest magnitude passing through
+  writeRegister(MPR121_NHDF, 0x05); ///< Noise Half Delta Falling, value 1-63: .... so on
   writeRegister(MPR121_NCLF, 0x01);
   writeRegister(MPR121_FDLF, 0x00);
 
-  writeRegister(MPR121_NHDT, 0x00);
+  writeRegister(MPR121_NHDT, 0x00); ///< Noise Half Delta Touch ... and so on
   writeRegister(MPR121_NCLT, 0x00);
   writeRegister(MPR121_FDLT, 0x00);
+  
+  ///< more: see Application Note AN3891
 
   writeRegister(MPR121_DEBOUNCE, 0);
   writeRegister(MPR121_CONFIG1, 0x10); // default, 16uA charge current

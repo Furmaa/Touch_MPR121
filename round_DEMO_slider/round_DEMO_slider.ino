@@ -18,11 +18,15 @@ BSD license, all text above must be included in any redistribution
 #include <Wire.h>
 #include "Adafruit_MPR121_mod.h"
 
+// tool for easy bit choose e.g. for electrode 
 #ifndef _BV
 #define _BV(bit) (1 << (bit)) 
 #endif
 
-// You can have up to 4 on one i2c bus
+// timing of status print
+uint16_t count = 0;
+
+// You can have up to 4 on one i2c bus.
 Adafruit_MPR121 cap = Adafruit_MPR121();
 
 // Keeps track of the last pins touched
@@ -30,41 +34,47 @@ Adafruit_MPR121 cap = Adafruit_MPR121();
 uint16_t lasttouched = 0;
 uint16_t currtouched = 0;
 
-uint16_t count = 200;
-
+// Initialize intensity values of the inwards and outwards
+// facing LED series for the square-round DEMO board.
 int inwardsintensity = 0;
 int outwardsintensity = 0;
 
+// initialize arrays for basline and filtered output values of electrodes
 uint16_t firstbaseline[9] = {0,0,0,0,0,0,0,0,0};
 uint16_t currbaseline[9] = {0,0,0,0,0,0,0,0,0};
 uint16_t filtered[9] = {0,0,0,0,0,0,0,0,0};
+int intensity[9] = {0,0,0,0,0,0,0,0,0};
 
-// change touch and release from default if needed in range 0-255
+// Change touch and release from default if needed in range 0-255
 // Touch condition: Baseline - filtered output > touch threshold
 // Release condition: Baseline - filtered output < release threshold
+uint8_t touch = 3;
+uint8_t release = 2;
 // uint8_t touch = MPR121_TOUCH_THRESHOLD_DEFAULT;
 // uint8_t release = MPR121_RELEASE_THRESHOLD_DEFAULT;
+// (Product Specification sheet section 5.6)
 
-uint8_t touch = 3; //works OK with hardcoded baseline 175 (x4: ADC 700) and max. sampling freq
-uint8_t release = 2; //works OK with hardcoded baseline 175 (x4: ADC 700) and max. sampling freq 
+// Number of electrodes to be used, max. 12: 0,1,2....11
+uint8_t elcount = 9; 
 
-// uint8_t ecr =  MPR121_ECR_SETTING_DEFAULT;
+// Touch and release debounce values: how many times
+// MPR121 rejects the change of touch and release status.
+// Increases resistance to noise, slows detection. Range 0-7.
+uint8_t debounce_touch = 2;
+uint8_t debounce_release = 1;
+// (Product Specification sheet section 5.7)
 
-uint8_t elcount = 9; // number of electrodes to be used, max. 12: 0,1,2....11
-
-uint8_t debounce_touch = 3;
-uint8_t debounce_release = 0;
-
+// definition of ON/OFF state
 bool TURNED_ON = false;
 
-
+// Active electrode configuration: see Adafruit_MPR121_mod.h for details
 uint8_t ecr = MPR121_BL_TRACKING_ALL + MPR121_ELEPROX_EN_OFF + elcount; 
-// MPR121_BL_TRACKING_OFF disables baseline-tracking
-// MPR121_BL_TRACKING_5MSB enables baseline-tracking with baseline value initalized: 5 MSB loaded from touch to baseline 
-// MPR121_BL_TRACKING_ALL enables baseline-tracking with baseline value initalized: all loaded from touch to baseline 
+// uint8_t ecr =  MPR121_ECR_SETTING_DEFAULT;
+// (Product Specification sheet section 5.11)
 
-uint8_t Inwards =  10;      // the number of the LED pin
-uint8_t Outwards = 6;
+// Definition of the LED control pins, see schematics.
+uint8_t Inwards =  10;      
+uint8_t Outwards = 6;       
 
 void setup()
 {
@@ -75,12 +85,9 @@ void setup()
         delay(10);
     }
 
-    // Adafruit board:
-    // Default address is 0x5A, if tied to 3.3V its 0x5B
-    // If tied to SDA its 0x5C and if SCL then 0x5D 
-    // robotshop board:
-    // default 0x5B! ADDR pin connected to VDD
+    // .open starts communication with board at given address
     cap.open(MPR121_I2CADDR_ADAFRUIT);
+    // Addressing: see Adafruit_MPR121_mod.h and Product Specification sheet section 5.11
 
     // .init makes soft reset and writes default config values, leaves board in Stop Mode
     if (!cap.init(touch, release)) {
@@ -91,7 +98,8 @@ void setup()
     }
     Serial.println("MPR121 found!"); 
 
-    // comment AUTOCONFIG and alter values to adapt e.g. to Vdd != 3.3V
+    // comment AUTOCONFIG in Adafruit_MPR121_mod.cpp and 
+    // alter values to adapt e.g. to Vdd != 3.3V
     #ifndef AUTOCONFIG
         cap.writeRegister(MPR121_AUTOCONFIG0, 0x0B);
 
@@ -102,24 +110,34 @@ void setup()
         // baseline should be then between UPLIMIT and LOWLIMIT!
     #endif
 
-    //for sensitive Demo Touch Panel sampling and Baseline tracking is too fast: 
-    //baseline value gets adjusted if touched too slow, hence no touching is sensed!
+    //if Baseline tracking is too fast: 
+    //baseline value gets adjusted during the touch action, hence no touch detection!
     //try to set ESI value from Adafruit default 000 (1 ms, maximum scanning freq.) to slower... 
     //with encoding 100 (16ms, datasheet default) it works pretty well: recognizes swift and slow touches alike
-    cap.writeRegister(MPR121_CONFIG2, 0x33);
+    //cap.writeRegister(MPR121_CONFIG2, 0x33);
+    
     //or it might be better to play around with the baseline filter values: 
     // with that the baseline tracking characteristics can be optimized.
+    //Overwrite example:
+    cap.writeRegister(MPR121_NCLR, 0x10);
+    cap.writeRegister(MPR121_FDLR, 0xB0);
+    
+    cap.writeRegister(MPR121_NCLF, 0x10);
+    cap.writeRegister(MPR121_FDLF, 0x10);
+    
+    cap.writeRegister(MPR121_NHDT, 0x00); 
+    cap.writeRegister(MPR121_NCLT, 0x00);
+    cap.writeRegister(MPR121_FDLT, 0x00);
+    //(Application Note AN3891, Product Specification sheet section 5.5) 
 
-    //if baseline tracking disabled, baseline values must be hardcoded!
-    //cap.writeRegister(MPR121_BASELINE_0 + elON, 181);
+    //if baseline tracking disabled, baseline values can be hardcoded!
+    //cap.writeRegister(MPR121_BASELINE_0 + electrodeNumber, 181);
 
-
+    //applying debounce settings
     cap.writeRegister(MPR121_DEBOUNCE, debounce_release<<4 + debounce_touch);
   
     // .begin writes ecr settings to put board in Run Mode
     cap.begin(ecr);
-
-    Serial.println();
 
     delay(1000); // to make sure auto-config runs through
 
@@ -156,43 +174,56 @@ void loop() {
     // if it *was* touched and now *isnt*, alert!
     if (!(currtouched & _BV(i)) && (lasttouched & _BV(i)) ) {
       Serial.print(i); Serial.print(" released! Reading:");Serial.println(cap.filteredData(i));
+      filtered[i] = 0;
+      currbaseline[i] = 0;
+      intensity[i] = 0;
       // printStatus(&cap);
+    }
+
+    if (currtouched & _BV(i)) {
+      filtered[i] = cap.filteredData(i);
+      currbaseline[i] = cap.baselineData(i);
+      intensity[i] = currbaseline[i] - filtered[i];
+    }
+    else {
+      filtered[i] = 0;
+      currbaseline[i] = 0;
+      intensity[i] = 0;
     }
   }
 
-  for (uint8_t i = 0; i < elcount; i++) {
-    filtered[i] = cap.filteredData(i);
-    currbaseline[i] = cap.baselineData(i);
-  }
-  delay(10);
+//  // TURNED_ON while 0th electrode touched!
+//  if ((currtouched & _BV(0)) && !(lasttouched & _BV(0)) && !(currtouched & _BV(1)) && !(currtouched & _BV(7)) ){
+//    TURNED_ON = true;
+//  }
+//  if (!(currtouched & _BV(0)) && (lasttouched & _BV(0)) ) {
+//    TURNED_ON = false;
+//  }
 
-  count--;
-  
-  if ((currtouched & _BV(0)) && !(lasttouched & _BV(0)) && !(currtouched & _BV(1)) && !(currtouched & _BV(7)) ){
-    TURNED_ON = true;
-  }
-  if (!(currtouched & _BV(0)) && (lasttouched & _BV(0)) ) {
-    TURNED_ON = false;
+  // ON/OFF as the 0th electrode is touched
+  if ((currtouched & _BV(0)) && !(lasttouched & _BV(0)) && !(currtouched & _BV(1)) && !(currtouched & _BV(7))){
+    TURNED_ON = !TURNED_ON;
   }
 
   inwardsintensity = 0;
   outwardsintensity = 0;
+
   
   if (TURNED_ON) {
-    inwardsintensity = ((currbaseline[1] - filtered[1]) + (currbaseline[3] - filtered[3]) + (currbaseline[5] - filtered[5]) + (currbaseline[7] - filtered[7]) - 4*(currbaseline[8] - filtered[8]))<<1; 
-    outwardsintensity = ((currbaseline[2] - filtered[2]) + (currbaseline[4] - filtered[4]) + (currbaseline[6] - filtered[6]) - 3*(currbaseline[8] - filtered[8]))<<1;           
+    inwardsintensity = (intensity[1] + intensity[3] + intensity[5] + intensity[7] - 4*intensity[8])<<1; 
+    outwardsintensity = (intensity[2] + intensity[4] + intensity[6] - 3*intensity[8])<<1;           
   }
   
   if (inwardsintensity > 255){
     inwardsintensity = 255;
   }
-    if (inwardsintensity <= 32){
+    if (inwardsintensity <= 0){
     inwardsintensity = 0;
   }
   if (outwardsintensity > 255){
     outwardsintensity = 255;
   }
-  if (outwardsintensity <= 32){
+  if (outwardsintensity <= 0){
     outwardsintensity = 0;
   }
 
@@ -203,9 +234,13 @@ void loop() {
     printStatus(&cap);
     Serial.print("Inwards intensity:"); Serial.println(inwardsintensity, DEC);
     Serial.print("Outwards intensity:"); Serial.println(outwardsintensity, DEC);
+    for (uint8_t i = 0; i < elcount; i++) {
+      Serial.print("Electrode "); Serial.print(i); Serial.print(" intensity: "); Serial.println(intensity[i], DEC);
+    }
 //    printStatistic(&cap, ecr, 6);
-    count = 200;
+    count = 2000;
   }
+  count--;
   
   // reset our state
   lasttouched = currtouched;

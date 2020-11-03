@@ -25,21 +25,34 @@
 #include "Arduino.h"
 #include <Wire.h>
 
-// The default I2C address
+///< board addressing
 #define MPR121_I2CADDR_ADAFRUIT 0x5A        ///< adafruit board I2C address
 #define MPR121_I2CADDR_ROBOTSHOP 0x5B        ///< robotshop board I2C address
 #define MPR121_I2CADDR_DEFAULT MPR121_I2CADDR_ADAFRUIT ///< default I2C address
+
+///< more default values
 #define MPR121_TOUCH_THRESHOLD_DEFAULT 12  ///< default touch threshold value
 #define MPR121_RELEASE_THRESHOLD_DEFAULT 6 ///< default relese threshold value
-#define MPR121_ECR_SETTING_DEFAULT 0x8F // 5 bits for baseline tracking & proximity disabled & all electrodes running
-#define MPR121_BL_TRACKING_OFF 0b01000000 
+#define MPR121_ECR_SETTING_DEFAULT 0x8F ///< 5 bits for baseline tracking & proximity disabled & all electrodes running
+
+///< Setting up electrode configuration: baseline tracking
+///< - adjusts baseline value to change in filtered output: to acknowledge variations in the electrode surroundings.
+#define MPR121_BL_TRACKING_OFF 0b01000000 ///< baseline tracking OFF: rigid system, does not adjust itself to change in environment
 #define MPR121_BL_TRACKING_ALL 0b11000000 
-#define MPR121_BL_TRACKING_5MSB 0b10000000 
-#define MPR121_BL_TRACKING_NOINIT 0b00000000 
-#define MPR121_ELEPROX_EN_01 0b00010000 
+#define MPR121_BL_TRACKING_5MSB 0b10000000 //initialize only 5 most siginificant bits
+#define MPR121_BL_TRACKING_NOINIT 0b00000000 // baseline tracking ON w/o init! Needs more time after startup
+
+///< Setting up electrode configuration: proximity detection 
+///< - summes the signal of all electrodes to one value virtually creating a bigger, proximity electrode
+#define MPR121_ELEPROX_EN_01 0b00010000 ///< for explanation see MPR121 Application Note AN3893
 #define MPR121_ELEPROX_EN_03 0b00100000 
 #define MPR121_ELEPROX_EN_011 0b00110000 
 #define MPR121_ELEPROX_EN_OFF 0b00000000 
+
+///< Setting up electrode configuration: example
+///< uint8_t ecr = MPR121_BL_TRACKING_ALL + MPR121_ELEPROX_EN_OFF + elcount; 
+///< baseline tracking ON with full initialization
+
 
 
 /*!
@@ -51,15 +64,15 @@ enum {
   MPR121_FILTDATA_0L = 0x04,
   MPR121_FILTDATA_0H = 0x05,
   MPR121_BASELINE_0 = 0x1E,
-  MPR121_MHDR = 0x2B,
-  MPR121_NHDR = 0x2C,
-  MPR121_NCLR = 0x2D,
-  MPR121_FDLR = 0x2E,
-  MPR121_MHDF = 0x2F,
-  MPR121_NHDF = 0x30,
+  MPR121_MHDR = 0x2B, 
+  MPR121_NHDR = 0x2C, 
+  MPR121_NCLR = 0x2D, 
+  MPR121_FDLR = 0x2E, 
+  MPR121_MHDF = 0x2F, 
+  MPR121_NHDF = 0x30, 
   MPR121_NCLF = 0x31,
   MPR121_FDLF = 0x32,
-  MPR121_NHDT = 0x33,
+  MPR121_NHDT = 0x33, 
   MPR121_NCLT = 0x34,
   MPR121_FDLT = 0x35,
 
@@ -94,14 +107,14 @@ enum {
  */
 class Adafruit_MPR121 {
 public:
-  // Hardware I2C
+  ///< Hardware I2C
   Adafruit_MPR121();
 
-  void open(uint8_t i2caddr = MPR121_I2CADDR_DEFAULT,
+  void open(uint8_t i2caddr = MPR121_I2CADDR_DEFAULT, 
                 TwoWire *theWire = &Wire);
-  boolean init( uint8_t touchThreshold = MPR121_TOUCH_THRESHOLD_DEFAULT,
+  boolean init( uint8_t touchThreshold = MPR121_TOUCH_THRESHOLD_DEFAULT, 
                 uint8_t releaseThreshold = MPR121_RELEASE_THRESHOLD_DEFAULT);
-  void begin(uint8_t ecr = MPR121_ECR_SETTING_DEFAULT);
+  void begin(uint8_t ecr = MPR121_ECR_SETTING_DEFAULT); 
 
   uint16_t filteredData(uint8_t t);
   uint16_t baselineData(uint8_t t);
