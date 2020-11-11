@@ -15,13 +15,7 @@ Written by Limor Fried/Ladyada for Adafruit Industries.
 BSD license, all text above must be included in any redistribution
 **********************************************************/
 
-#include <Wire.h>
 #include "Adafruit_MPR121_mod.h"
-
-// tool for easy bit choose e.g. for electrode 
-#ifndef _BV
-#define _BV(bit) (1 << (bit)) 
-#endif
 
 // timing of status print
 uint16_t count = 0;
@@ -34,47 +28,61 @@ Adafruit_MPR121 cap = Adafruit_MPR121();
 uint16_t lasttouched = 0;
 uint16_t currtouched = 0;
 
-// Initialize intensity values of the inwards and outwards
+// Initialize intensity values of the INWARDS and outwards
 // facing LED series for the square-round DEMO board.
-int inwardsintensity = 0;
-int outwardsintensity = 0;
+uint16_t inwardsintensity = 0;
+uint16_t outwardsintensity = 0;
+uint8_t cancellance = 0;
+const uint8_t CANCELLANCE_TH = 2;
+const uint8_t INWARDS_BASE = 0;
 
 // initialize arrays for basline and filtered output values of electrodes
 uint16_t firstbaseline[9] = {0,0,0,0,0,0,0,0,0};
 uint16_t currbaseline[9] = {0,0,0,0,0,0,0,0,0};
 uint16_t filtered[9] = {0,0,0,0,0,0,0,0,0};
-int intensity[9] = {0,0,0,0,0,0,0,0,0};
+uint16_t intensity[9] = {0,0,0,0,0,0,0,0,0};
 
 // Change touch and release from default if needed in range 0-255
 // Touch condition: Baseline - filtered output > touch threshold
 // Release condition: Baseline - filtered output < release threshold
-uint8_t touch = 3;
-uint8_t release = 2;
+const uint8_t TOUCH = 3;
+const uint8_t RELEASE = 2;
 // uint8_t touch = MPR121_TOUCH_THRESHOLD_DEFAULT;
 // uint8_t release = MPR121_RELEASE_THRESHOLD_DEFAULT;
 // (Product Specification sheet section 5.6)
 
 // Number of electrodes to be used, max. 12: 0,1,2....11
-uint8_t elcount = 9; 
+const uint8_t ELCOUNT = 9; 
+
+// keep track of the timer overflow interrupts. Max value 255 for timers 0,2 on Arduino (here timer 2 is used)
+uint8_t ticking = 0;
+const uint8_t TICK_OFF = 61; //61 ticks means a second, 1 tick is one counter overflow
+// turn ON blinks
+uint8_t blink_count = 0;
+const uint8_t BLINKS = 3;
+const uint8_t BLINK_TICKS = 10;
+const uint8_t PAUSE_TICKS = 20;
+//total turning on time: tick_ON = blink_count * ( blink_ticks + PAUSE_TICKS )
 
 // Touch and release debounce values: how many times
 // MPR121 rejects the change of touch and release status.
 // Increases resistance to noise, slows detection. Range 0-7.
-uint8_t debounce_touch = 2;
-uint8_t debounce_release = 1;
+const uint8_t DEBOUNCE_TOUCH = 1;
+const uint8_t DEBOUNCE_RELEASE = 0;
 // (Product Specification sheet section 5.7)
 
 // definition of ON/OFF state
-bool TURNED_ON = false;
+bool turned_on = false;
+bool turning = false;
 
 // Active electrode configuration: see Adafruit_MPR121_mod.h for details
-uint8_t ecr = MPR121_BL_TRACKING_ALL + MPR121_ELEPROX_EN_OFF + elcount; 
+const uint8_t ECR = MPR121_BL_TRACKING_ALL + MPR121_ELEPROX_EN_OFF + ELCOUNT; 
 // uint8_t ecr =  MPR121_ECR_SETTING_DEFAULT;
 // (Product Specification sheet section 5.11)
 
 // Definition of the LED control pins, see schematics.
-uint8_t Inwards =  10;      
-uint8_t Outwards = 6;       
+const uint8_t INWARDS =  10;      
+const uint8_t OUTWARDS = 6;       
 
 void setup()
 {
@@ -90,9 +98,9 @@ void setup()
     // Addressing: see Adafruit_MPR121_mod.h and Product Specification sheet section 5.11
 
     // .init makes soft reset and writes default config values, leaves board in Stop Mode
-    if (!cap.init(touch, release)) {
+    if (!cap.init(TOUCH, TOUCH)) {
         Serial.println("MPR121 not found, check wiring?");
-        while(!cap.init(touch, release)){
+        while(!cap.init(TOUCH, TOUCH)){
           delay(1000);
           }
     }
@@ -123,7 +131,7 @@ void setup()
     cap.writeRegister(MPR121_FDLR, 0xB0);
     
     cap.writeRegister(MPR121_NCLF, 0x10);
-    cap.writeRegister(MPR121_FDLF, 0x10);
+    cap.writeRegister(MPR121_FDLF, 0xB0);
     
     cap.writeRegister(MPR121_NHDT, 0x00); 
     cap.writeRegister(MPR121_NCLT, 0x00);
@@ -133,11 +141,16 @@ void setup()
     //if baseline tracking disabled, baseline values can be hardcoded!
     //cap.writeRegister(MPR121_BASELINE_0 + electrodeNumber, 181);
 
+    //set own touch and release thresholds for 8th ref electrode
+    cap.writeRegister(MPR121_TOUCHTH_0 + 2 * 8, 1);
+    cap.writeRegister(MPR121_RELEASETH_0 + 2 * 8, 0);
+
+
     //applying debounce settings
-    cap.writeRegister(MPR121_DEBOUNCE, debounce_release<<4 + debounce_touch);
+    cap.writeRegister(MPR121_DEBOUNCE, DEBOUNCE_RELEASE<<4 + DEBOUNCE_TOUCH);
   
     // .begin writes ecr settings to put board in Run Mode
-    cap.begin(ecr);
+    cap.begin(ECR);
 
     delay(1000); // to make sure auto-config runs through
 
@@ -150,22 +163,33 @@ void setup()
 
     Serial.println();
 
-    pinMode(Inwards, OUTPUT);
-    digitalWrite(Inwards, LOW);
-    pinMode(Outwards, OUTPUT);
-    digitalWrite(Outwards, LOW);
+    pinMode(INWARDS, OUTPUT);
+    digitalWrite(INWARDS, LOW);
+    pinMode(OUTWARDS, OUTPUT);
+    digitalWrite(OUTWARDS, LOW);
 
-    for (uint8_t i = 0; i < elcount; i++) {
+    for (uint8_t i = 0; i < ELCOUNT; i++) {
       firstbaseline[i] = cap.baselineData(i);
     }
 
+        // setup timer2 -- interferes with pwm pins 11, 3!
+
+    noInterrupts(); 
+    TCCR2A = 0;
+    TCCR2B = 0;
+    TCNT2  = 0;
+    TIMSK2 = 0;
+    TCCR2B |= (1 << WGM21);   // CTC mode
+    TCCR2B |= (111 << CS20); // 1024 prescaler ---> 16000000 / 1024 / 255 = 61 overflows per second 
+    TIMSK2 |= (1 << TOIE2);  // enable timer overflow, and compare interrupt
+    interrupts();
 }
 
 void loop() {
 //   Get the currently touched pads
   currtouched = cap.touched();
   
-  for (uint8_t i=0; i<elcount; i++) {
+  for (uint8_t i=0; i<ELCOUNT; i++) {
     // it if *is* touched and *wasnt* touched before, alert!
     if ((currtouched & _BV(i)) && !(lasttouched & _BV(i)) ) {
       Serial.print(i); Serial.print(" touched! Reading:"); Serial.println(cap.filteredData(i));
@@ -174,16 +198,14 @@ void loop() {
     // if it *was* touched and now *isnt*, alert!
     if (!(currtouched & _BV(i)) && (lasttouched & _BV(i)) ) {
       Serial.print(i); Serial.print(" released! Reading:");Serial.println(cap.filteredData(i));
-      filtered[i] = 0;
-      currbaseline[i] = 0;
-      intensity[i] = 0;
       // printStatus(&cap);
     }
 
     if (currtouched & _BV(i)) {
       filtered[i] = cap.filteredData(i);
       currbaseline[i] = cap.baselineData(i);
-      intensity[i] = currbaseline[i] - filtered[i];
+      if (currbaseline[i] > (filtered[i] + CANCELLANCE_TH)) {intensity[i] = currbaseline[i] - filtered[i] - CANCELLANCE_TH;}
+      else {intensity[i] = 0;}
     }
     else {
       filtered[i] = 0;
@@ -192,52 +214,96 @@ void loop() {
     }
   }
 
-//  // TURNED_ON while 0th electrode touched!
+
+//  // turned_on while 0th electrode touched!
 //  if ((currtouched & _BV(0)) && !(lasttouched & _BV(0)) && !(currtouched & _BV(1)) && !(currtouched & _BV(7)) ){
-//    TURNED_ON = true;
+//    turned_on = true;
 //  }
 //  if (!(currtouched & _BV(0)) && (lasttouched & _BV(0)) ) {
-//    TURNED_ON = false;
+//    turned_on = false;
 //  }
 
   // ON/OFF as the 0th electrode is touched
-  if ((currtouched & _BV(0)) && !(lasttouched & _BV(0)) && !(currtouched & _BV(1)) && !(currtouched & _BV(7))){
-    TURNED_ON = !TURNED_ON;
+  if //(!(currtouched & _BV(8)) && (currtouched & _BV(0)) && !(lasttouched & _BV(0)) && !(currtouched & _BV(1)) && !(currtouched & _BV(7)) && (tick_count2 >= TICK_OFF)){
+    ( (currtouched & _BV(0)) && !(lasttouched & _BV(0)) && !(currtouched & ~_BV(0)) ){
+    if (manners(turned_on, &turning, &ticking, PAUSE_TICKS, &inwardsintensity, &outwardsintensity, &blink_count, BLINKS)) {}
+    else {Serial.println("ERROR: this fella has no manners...");}
   }
-
-  inwardsintensity = 0;
-  outwardsintensity = 0;
-
+    
+  cancellance = intensity[8]*3;
   
-  if (TURNED_ON) {
-    inwardsintensity = (intensity[1] + intensity[3] + intensity[5] + intensity[7] - 4*intensity[8])<<1; 
-    outwardsintensity = (intensity[2] + intensity[4] + intensity[6] - 3*intensity[8])<<1;           
+  if (turned_on && !turning) {
+    inwardsintensity = (uint16_t)(intensity[1] + intensity[3] + intensity[5] + intensity[7]);
+    outwardsintensity= (uint16_t)(intensity[2] + intensity[4] + intensity[6]);
+      if ( inwardsintensity >= cancellance) {
+        inwardsintensity -= cancellance;
+      }
+      else {inwardsintensity = 0;}
+    inwardsintensity = (inwardsintensity<<1) + INWARDS_BASE;
+
+    if ( outwardsintensity >= cancellance) {
+      outwardsintensity -= cancellance;  
+    }
+    else {outwardsintensity = 0;}
+    outwardsintensity<<1;
   }
-  
-  if (inwardsintensity > 255){
-    inwardsintensity = 255;
-  }
-    if (inwardsintensity <= 0){
+  else if (!turned_on && !turning)
+  {
     inwardsintensity = 0;
-  }
-  if (outwardsintensity > 255){
-    outwardsintensity = 255;
-  }
-  if (outwardsintensity <= 0){
     outwardsintensity = 0;
   }
-
-  analogWrite(Inwards, inwardsintensity);
-  analogWrite(Outwards, outwardsintensity);
-
+  else if (turned_on && turning) { //while turning off...
+    inwardsintensity = 255;
+    outwardsintensity = 255;
+  }
+  else if (!turned_on && turning && (ticking == 0)) { //while turning on...
+//    inwardsintensity = ~(inwardsintensity|0);
+//    outwardsintensity = ~(outwardsintensity|0);
+    if ((blink_count % 2) == 0) {
+      inwardsintensity = 255; 
+      outwardsintensity = 255; 
+      ticking = BLINK_TICKS; 
+      blink_count--;
+      }
+    else {
+      inwardsintensity = 0; 
+      outwardsintensity = 0; 
+      ticking = PAUSE_TICKS; 
+      blink_count--;
+      }
+  }
+  if (inwardsintensity >= 200){
+    inwardsintensity = 255;
+    digitalWrite(INWARDS, HIGH);
+  }
+  else if (inwardsintensity <= 0){
+    inwardsintensity = 0;
+    digitalWrite(INWARDS, LOW);
+  }
+  else {
+    analogWrite(INWARDS, inwardsintensity);
+  }
+  if (outwardsintensity >= 200){
+    outwardsintensity = 255;
+    digitalWrite(OUTWARDS, HIGH);
+  }
+  else if (outwardsintensity <= 0){
+    outwardsintensity = 0;
+    digitalWrite(OUTWARDS, LOW);
+  }
+  else {
+    analogWrite(OUTWARDS, outwardsintensity);
+  }
+  
   if (count == 0) {
-    printStatus(&cap);
+    //printStatus(&cap);
     Serial.print("Inwards intensity:"); Serial.println(inwardsintensity, DEC);
     Serial.print("Outwards intensity:"); Serial.println(outwardsintensity, DEC);
-    for (uint8_t i = 0; i < elcount; i++) {
+    for (uint8_t i = 0; i < ELCOUNT; i++) {
       Serial.print("Electrode "); Serial.print(i); Serial.print(" intensity: "); Serial.println(intensity[i], DEC);
     }
-//    printStatistic(&cap, ecr, 6);
+    Serial.print("Cancellance: "); Serial.println(cancellance);
+    //printStatistic(&cap, ELCOUNT, 6);
     count = 2000;
   }
   count--;
@@ -246,7 +312,46 @@ void loop() {
   lasttouched = currtouched;
 }
 
-void printStatistic (Adafruit_MPR121 * obj, uint8_t ecr, uint8_t count) {
+ISR(TIMER2_OVF_vect)          // timer overflow interrupt service routine
+{
+  if (ticking > 0) {
+    ticking--; 
+    Serial.print("ticking: "); 
+    Serial.println(ticking);
+    }
+  
+  if ((ticking == 0) && turned_on && turning) {
+    turned_on = 0;
+    turning = 0;
+    Serial.println("Turned off."); 
+  }
+  else if ((ticking == 0) && !turned_on && turning && (blink_count == 0)) {
+    turned_on = 1;
+    turning = 0;
+    Serial.println("Turned on."); 
+  }
+}
+
+uint8_t manners (bool turnedon, bool * turn, uint8_t * ticks, uint8_t pause, uint16_t * in_intensity, uint16_t * out_intensity, uint8_t * blinkcount, uint8_t blinkinit) {
+  if (!turnedon && !(*turn) ) { //then start turning on...
+    *turn = 1;
+    *ticks = pause;
+    *in_intensity = 0; //and say goodday!
+    *out_intensity = 0;
+    *blinkcount = (blinkinit<<1);
+    Serial.println("Turning on!"); 
+  }
+  else if (turnedon && !(*turn) ) { //then start turning off...
+    *turn = 1;
+    *ticks = TICK_OFF;
+    *in_intensity = 255; //and say goodbye!
+    *out_intensity = 255;    
+    Serial.println("Turning off!"); 
+  }
+  return (uint8_t) 1;
+}
+
+void printStatistic (Adafruit_MPR121 * obj, uint8_t eleccount, uint8_t count) {
 
     if (count > 6) {count = 6;}
 
@@ -256,13 +361,11 @@ void printStatistic (Adafruit_MPR121 * obj, uint8_t ecr, uint8_t count) {
     int8_t diff;  
     uint16_t varsum;
     uint16_t datapoints = 1 << count;
-    uint8_t elcount = ecr << 4;
-    elcount = elcount >> 4;
-    uint16_t filtered [elcount][datapoints];
-    Serial.print("Number of active electrodes: "); Serial.println(elcount);
+    uint16_t filtered [eleccount][datapoints];
+    Serial.print("Number of active electrodes: "); Serial.println(eleccount);
     Serial.print("Number of datapoints: "); Serial.println(datapoints);
 
-    for (uint8_t i = 0; i < elcount; i++) {
+    for (uint8_t i = 0; i < eleccount; i++) {
       sum = 0;
       avg = 0;
       stddev = 0;
