@@ -15,12 +15,7 @@ Written by Limor Fried/Ladyada for Adafruit Industries.
 BSD license, all text above must be included in any redistribution
 **********************************************************/
 
-#include <Wire.h>
 #include "Adafruit_MPR121_mod.h"
-
-#ifndef _BV
-#define _BV(bit) (1 << (bit)) 
-#endif
 
 // You can have up to 4 on one i2c bus
 Adafruit_MPR121 cap = Adafruit_MPR121();
@@ -32,35 +27,53 @@ uint16_t currtouched = 0;
 
 uint16_t count = 0;
 
-int intensity = 0;
-int proximity = 0;
+unsigned long start = 0;
+uint16_t proxon = 1000;
+
+uint8_t intensity = 0;
+uint8_t proximity = 0;
+uint8_t touchval = 0;
+uint8_t ref1val = 0;
+uint8_t ref2val = 0;
 uint16_t curr_touch_baseline = 0;
 uint16_t currfiltered = 0;
 uint16_t first_touch_baseline  = 0;
-uint16_t curr_ref_baseline = 0;
-uint16_t first_ref_baseline = 0;
-uint16_t curr_ref_filtered = 0;
+uint16_t curr_ref1_baseline = 0;
+uint16_t first_ref1_baseline = 0;
+uint16_t curr_ref1_filtered = 0;
+uint16_t curr_ref2_baseline = 0;
+uint16_t first_ref2_baseline = 0;
+uint16_t curr_ref2_filtered = 0;
 
-// change touch and release from default if needed in range 0-255
+// define touch and release in range 0-255:
+uint8_t touch = 5; 
+uint8_t release = 4; 
 // Touch condition: Baseline - filtered output > touch threshold
 // Release condition: Baseline - filtered output < release threshold
 // uint8_t touch = MPR121_TOUCH_THRESHOLD_DEFAULT;
 // uint8_t release = MPR121_RELEASE_THRESHOLD_DEFAULT;
-uint8_t touch = 3; //works OK with hardcoded baseline 175 (x4: ADC 700) and max. sampling freq
-uint8_t release = 2; //works OK with hardcoded baseline 175 (x4: ADC 700) and max. sampling freq 
-// uint8_t ecr =  MPR121_ECR_SETTING_DEFAULT;
-uint8_t elcount = 2; // number of electrodes to be used, max. 12
-uint8_t eltouch = 0; 
-uint8_t elref = 1; 
-uint8_t debounce_touch = 5;
-uint8_t debounce_release = 2;
 
-uint8_t ecr = MPR121_BL_TRACKING_ALL + MPR121_ELEPROX_EN_OFF + elcount; 
+// proximity threshhold value
+uint8_t proximity_th = 1;
+
+uint8_t elcount = 3; // number of electrodes to be used, max. 12
+uint8_t eltouch = 0; // PIN number to which main (touch) electrode is connected
+uint8_t elref1 = 1;  // PIN number to which reference (active shielding) electrode is connected
+uint8_t elref2 = 2;
+
+// define debounce: higher number may improve noise resistance. Range 0-15
+uint8_t debounce_touch = 5; // number of consecutively sensed touches to be discarded.
+uint8_t debounce_release = 2; // number of consecutively sensed releases to be discarded.
+
+
+uint8_t ecr = MPR121_BL_TRACKING_5MSB + MPR121_ELEPROX_EN_OFF + elcount; 
 // MPR121_BL_TRACKING_OFF disables baseline-tracking
 // MPR121_BL_TRACKING_5MSB enables baseline-tracking with baseline value initalized: 5 MSB loaded from touch to baseline 
 // MPR121_BL_TRACKING_ALL enables baseline-tracking with baseline value initalized: all loaded from touch to baseline 
+// uint8_t ecr =  MPR121_ECR_SETTING_DEFAULT; // set to Adafruit default
 
-uint8_t ArrayPin =  3;      // the number of the LED pin
+// define LED control pins on Arduino
+uint8_t ArrayPin =  3;      
 uint8_t RingPin = 6;
 uint8_t RowPin = 10;
 
@@ -87,7 +100,7 @@ void setup()
           delay(1000);
           }
     }
-    Serial.println("MPR121 found!"); 
+    // Serial.println("MPR121 found!"); 
 
     // comment AUTOCONFIG and alter values to adapt e.g. to Vdd != 3.3V
     #ifndef AUTOCONFIG
@@ -108,11 +121,15 @@ void setup()
     //or it might be better to play around with the baseline filter values: 
     // with that the baseline tracking characteristics can be optimized.
     //Overwrite example:
-    cap.writeRegister(MPR121_NCLR, 0x10);
-    cap.writeRegister(MPR121_FDLR, 0xB0);
+    cap.writeRegister(MPR121_MHDR, 0x02);
+    cap.writeRegister(MPR121_NHDR, 0x01);
+    cap.writeRegister(MPR121_NCLR, 0x05);
+    cap.writeRegister(MPR121_FDLR, 0xC0);
     
-    cap.writeRegister(MPR121_NCLF, 0x10);
-    cap.writeRegister(MPR121_FDLF, 0x10);
+    cap.writeRegister(MPR121_MHDF, 0x02);
+    cap.writeRegister(MPR121_NHDF, 0x01);
+    cap.writeRegister(MPR121_NCLF, 0x05);
+    cap.writeRegister(MPR121_FDLF, 0xC0);
     
     cap.writeRegister(MPR121_NHDT, 0x00); 
     cap.writeRegister(MPR121_NCLT, 0x00);
@@ -123,7 +140,7 @@ void setup()
     //if baseline tracking disabled, baseline values must be hardcoded!
     //cap.writeRegister(MPR121_BASELINE_0 + eltouch, 181);
 
-
+    //writing debounce values to 
     cap.writeRegister(MPR121_DEBOUNCE, debounce_release<<4 + debounce_touch);
   
     // .begin writes ecr settings to put board in Run Mode
@@ -134,97 +151,122 @@ void setup()
     delay(1000); // to make sure auto-config runs through
 
     // Print configuration registers
-    Serial.println("CONFIG REGISTERS");
-    for (uint8_t i = 0x2B; i < 0x80; i++) {
-      Serial.print("$"); Serial.print(i, HEX);
-      Serial.print(": 0x"); Serial.println(cap.readRegister8(i), HEX);
-    }
+    // Serial.println("CONFIG REGISTERS");
+    // for (uint8_t i = 0x2B; i < 0x80; i++) {
+    //   Serial.print("$"); Serial.print(i, HEX);
+    //   Serial.print(": 0x"); Serial.println(cap.readRegister8(i), HEX);
+    // }
 
-    Serial.println();
+    // Serial.println();
 
     pinMode(ArrayPin, OUTPUT);
-    analogWrite(ArrayPin, 0);
+    digitalWrite(ArrayPin, LOW);
     pinMode(RowPin, OUTPUT);
-    digitalWrite(RowPin, LOW);
+    analogWrite(RowPin, 0);
     pinMode(RingPin, OUTPUT);
-    digitalWrite(RingPin, LOW);
+    analogWrite(RingPin, 0);
 
     first_touch_baseline = cap.baselineData(eltouch);
-    first_ref_baseline = cap.baselineData(elref);
+    first_ref1_baseline = cap.baselineData(elref1);
+    first_ref2_baseline = cap.baselineData(elref2);
 
+    Serial.println("touchval ref1val ref2val");
 }
 
 void loop() {
 //   Get the currently touched pads
   currtouched = cap.touched();
   
-  for (uint8_t i=0; i<elcount; i++) {
-    // it if *is* touched and *wasnt* touched before, alert!
-    if ((currtouched & _BV(i)) && !(lasttouched & _BV(i)) ) {
-      Serial.print(i); Serial.print(" touched! Reading:"); Serial.println(cap.filteredData(i));
-      // printStatus(&cap);
-    }
-    // if it *was* touched and now *isnt*, alert!
-    if (!(currtouched & _BV(i)) && (lasttouched & _BV(i)) ) {
-      Serial.print(i); Serial.print(" released! Reading:");Serial.println(cap.filteredData(i));
-      // printStatus(&cap);
-    }
-  }
+  // for (uint8_t i=0; i<elcount; i++) {
+  //   // it if *is* touched and *wasnt* touched before, alert!
+  //   if ((currtouched & _BV(i)) && !(lasttouched & _BV(i)) ) {
+  //     Serial.print(i); Serial.print(" touched! Reading:"); Serial.println(cap.filteredData(i));
+  //     // printStatus(&cap);
+  //   }
+  //   // if it *was* touched and now *isnt*, alert!
+  //   if (!(currtouched & _BV(i)) && (lasttouched & _BV(i)) ) {
+  //     Serial.print(i); Serial.print(" released! Reading:");Serial.println(cap.filteredData(i));
+  //     // printStatus(&cap);
+  //   }
+  // }
 
-  // reset our state
-  lasttouched = currtouched;
+  // // reset our state
+  // lasttouched = currtouched;
 
   currfiltered = cap.filteredData(eltouch);
   curr_touch_baseline = cap.baselineData(eltouch);
-  curr_ref_baseline = cap.baselineData(elref);
-  curr_ref_filtered = cap.filteredData(elref);
+  curr_ref1_baseline = cap.baselineData(elref1);
+  curr_ref1_filtered = cap.filteredData(elref1);
+  curr_ref2_baseline = cap.baselineData(elref2);
+  curr_ref2_filtered = cap.filteredData(elref2);
+  touchval =(int)(curr_touch_baseline-currfiltered);
+  ref1val = (int)(curr_ref1_baseline-curr_ref1_filtered);
+  ref2val = (int)(curr_ref2_baseline-curr_ref2_filtered);
+  if (curr_touch_baseline > currfiltered){
+    touchval = curr_touch_baseline-currfiltered;
+  }
+  else {
+    touchval = 0;
+  }
+    if (curr_ref1_baseline > curr_ref1_filtered){
+    ref1val = curr_ref1_baseline-curr_ref1_filtered;
+  }
+  else {
+    ref1val = 0;
+  }
+    if (curr_ref2_baseline > curr_ref2_filtered){
+    ref2val = curr_ref2_baseline-curr_ref2_filtered;
+  }
+  else {
+    ref2val = 0;
+  }
+  // if (count == 0) {
+  //   printStatus(&cap);
+  //   Serial.print("Intensity:"); Serial.println(intensity, DEC);
+  //   Serial.print("Proximity:"); Serial.println(proximity, DEC);
+  //   printStatistic(&cap, ecr, 6);
+  //   count = 2000;
+  // }
+  // count--;
+  Serial.print(touchval);
+  Serial.print(",");
+  Serial.print(ref1val);
+  Serial.print(",");
+  Serial.println(ref2val);
 
-  
-
-  if (count == 0) {
-    printStatus(&cap);
-    Serial.print("Intensity:"); Serial.println(intensity, DEC);
-    Serial.print("Proximity:"); Serial.println(proximity, DEC);
-//    printStatistic(&cap, ecr, 6);
-    count = 2000;
+  if (touchval+ref1val >= 3*ref2val) {
+    proximity = touchval+ref1val - 3*ref2val;
   }
-  count--;
-  
-  if (currtouched & _BV(eltouch)){
-    proximity =255;
-//    first_touch_baseline = currfiltered;
-    intensity = ((curr_touch_baseline - currfiltered) - (curr_ref_baseline - curr_ref_filtered))<<4;
-  }
-  else if (!(currtouched & _BV(eltouch))) 
+  else
   {
-    intensity = 0;
-    proximity = (((curr_ref_baseline - currfiltered) + (curr_ref_baseline - curr_ref_filtered))<<3);
-//    if ((first_touch_baseline - curr_touch_baseline)>0){
-//      proximity += ((first_touch_baseline - curr_touch_baseline)<<4);
-//    }
-//    else {
-//      proximity -= ((curr_touch_baseline - first_touch_baseline)<<6);
-//    }
-  }
-  else 
-  {
-    intensity = 0;
     proximity = 0;
   }
+
+  intensity = 0;
+
+  if ( touchval >= ref1val/2 + ref2val + touch){
+    intensity = (touchval - ref1val/2 - ref2val - touch)<<3;
+    //Serial.print("Intensity:"); Serial.println(intensity, DEC);
+    start = millis();
+    digitalWrite(ArrayPin, HIGH);
+  }
+  else if (proximity > proximity_th) {
+    digitalWrite(ArrayPin, HIGH);
+    start = millis();
+    //Serial.print("Proximity:"); Serial.println(proximity, DEC);
+  }
+
+  if (( millis() - start )> proxon){
+    digitalWrite(ArrayPin,LOW);
+  }
+
   if (intensity > 255){
     intensity = 255;
   }
     if (intensity < 0){
     intensity = 0;
   }
-    if (proximity > 255){
-    proximity = 255;
-  }
-  if (proximity  < 0) {
-    proximity = 0;
-  }
-  
-  analogWrite(ArrayPin, proximity);
+
   analogWrite(RowPin, intensity);
   analogWrite(RingPin, intensity);
   
@@ -320,3 +362,4 @@ void printStatus (Adafruit_MPR121 * obj) {
 
     Serial.println();
 }
+
