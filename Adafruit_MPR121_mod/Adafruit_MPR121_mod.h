@@ -22,6 +22,10 @@
 #ifndef ADAFRUIT_MPR121_H
 #define ADAFRUIT_MPR121_H
 
+#ifndef _BV
+#define _BV(bit) (1 << (bit)) 
+#endif
+
 #include "Arduino.h"
 #include <Wire.h>
 
