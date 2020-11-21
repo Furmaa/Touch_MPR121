@@ -53,10 +53,22 @@ uint8_t release = 2;
 // uint8_t touch = MPR121_TOUCH_THRESHOLD_DEFAULT;
 // uint8_t release = MPR121_RELEASE_THRESHOLD_DEFAULT;
 
-uint8_t elcount = 3; // number of electrodes to be used, max. 12
-uint8_t eltouch = 0; // PIN number to which main (touch) electrode is connected
-uint8_t elref1 = 1;  // PIN number to which reference (active shielding) electrode is connected
-uint8_t elref2 = 2;
+uint8_t elcount = 8; // number of electrodes to be used, max. 12
+uint16_t currbaseline[12] = {0};
+uint16_t filtered[12] = {0};
+char * const ELELABELS[12] = {0};
+const char ELE0LABEL[] = "ELE0:";
+const char ELE1LABEL[] = "ELE1:";
+const char ELE2LABEL[] = "ELE2:";
+const char ELE3LABEL[] = "ELE3:";
+const char ELE4LABEL[] = "ELE4:";
+const char ELE5LABEL[] = "ELE5:";
+const char ELE6LABEL[] = "ELE6:";
+const char ELE7LABEL[] = "ELE7:";
+const char ELE8LABEL[] = "ELE8:";
+const char ELE9LABEL[] = "ELE9:";
+const char ELE10LABEL[] = "ELE10:";
+const char ELE11LABEL[] = "ELE11:";
 
 // define debounce: higher number may improve noise resistance. Range 0-15
 uint8_t debounce_touch = 5; // number of consecutively sensed touches to be discarded.
@@ -98,13 +110,11 @@ void setup()
     cap.open(MPR121_I2CADDR_ADAFRUIT);
 
     // .init makes soft reset and writes default config values, leaves board in Stop Mode
-    if (!cap.init(touch, release)) {
-        Serial.println("MPR121 not found, check wiring?");
-        while(!cap.init(touch, release)){
-          delay(1000);
-          }
+    while(!cap.init(touch, release)){
+      // Serial.println("MPR121 not found, check wiring?");
+      delay(1000);
     }
-    Serial.println("MPR121 found!"); 
+    // Serial.println("MPR121 found!"); 
 
     // comment AUTOCONFIG and alter values to adapt e.g. to Vdd != 3.3V
     #ifndef AUTOCONFIG
@@ -150,26 +160,22 @@ void setup()
     // .begin writes ecr settings to put board in Run Mode
     cap.begin(ecr);
 
-    Serial.println();
+    // Serial.println();
 
     delay(1000); // to make sure auto-config runs through
 
     // Print configuration registers
-    Serial.println("CONFIG REGISTERS");
-    for (uint8_t i = 0x2B; i < 0x80; i++) {
-      Serial.print("$"); Serial.print(i, HEX);
-      Serial.print(": 0x"); Serial.println(cap.readRegister8(i), HEX);
-    }
+    // Serial.println("CONFIG REGISTERS");
+    // for (uint8_t i = 0x2B; i < 0x80; i++) {
+    //   Serial.print("$"); Serial.print(i, HEX);
+    //   Serial.print(": 0x"); Serial.println(cap.readRegister8(i), HEX);
+    // }
 
-    Serial.println();
+    // Serial.println();
 
     digitalWrite(ArrayPin, LOW);
     digitalWrite(RingPin, LOW);
     digitalWrite(RowPin, LOW);
-
-    first_touch_baseline = cap.baselineData(eltouch);
-    first_ref1_baseline = cap.baselineData(elref1);
-    first_ref2_baseline = cap.baselineData(elref2);
 
     // setup timer1 -- interferes with pwm pins 9, 10!
 
@@ -189,17 +195,19 @@ void setup()
 void loop() {
 //   print electrode values
 
-for (uint8_t i = 0; i < elcount; i++) {
-  diff = cap.baselineData(i) - cap.filteredData(i);
-//  Serial.print(cap.filteredData(i));
-//  Serial.print("\t");
-  Serial.print(cap.baselineData(i));
-  Serial.print("\t");
+for (uint8_t i = 0; i < (elcount-1); i++) {
+  // diff = cap.baselineData(i) - cap.filteredData(i);
+ Serial.print(i);
+ Serial.print(cap.filteredData(i));
+ Serial.print(",");
+  // Serial.print(cap.baselineData(i));
+  // Serial.print("\t");
 //  Serial.print(diff);
 //  Serial.print("\t");
 
 }
-Serial.println();
+Serial.print(elcount-1);
+Serial.println(cap.filteredData(elcount-1));
   
 }
 

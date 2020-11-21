@@ -43,12 +43,6 @@ uint8_t cancellance = 0;
 const uint8_t CANCELLANCE_TH = 2;
 const uint8_t INWARDS_BASE = 0;
 
-// initialize arrays for basline and filtered output values of electrodes
-uint16_t firstbaseline[9] = {0,0,0,0,0,0,0,0,0};
-uint16_t currbaseline[9] = {0,0,0,0,0,0,0,0,0};
-uint16_t filtered[9] = {0,0,0,0,0,0,0,0,0};
-uint16_t intensity[9] = {0,0,0,0,0,0,0,0,0};
-
 // Change touch and release from default if needed in range 0-255
 // Touch condition: Baseline - filtered output > touch threshold
 // Release condition: Baseline - filtered output < release threshold
@@ -58,8 +52,14 @@ const uint8_t RELEASE = 6;
 // uint8_t release = MPR121_RELEASE_THRESHOLD_DEFAULT;
 // (Product Specification sheet section 5.6)
 
-// Number of electrodes to be used, max. 12: 0,1,2....11
+// Number of electrodes to be used, max. 12: 1,2....12
 const uint8_t ELCOUNT = 9; 
+
+// initialize arrays for basline and filtered output values of electrodes
+uint16_t firstbaseline[12] = {0};
+uint16_t currbaseline[12] = {0};
+uint16_t filtered[12] = {0};
+uint16_t intensity[12] = {0};
 
 // keep track of the timer overflow interrupts. Max value 255 for timers 0,2 on Arduino (here timer 2 is used)
 uint8_t ticking = 0;
