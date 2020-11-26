@@ -38,4 +38,7 @@ Adafruit_MPR121_Arduino-shield/Adafruit MPR121 Capacitive Touch Shield.pretty/SO
 round_DEMO.jpg
 round_DEMO_slider.png
 round_DEMO_highlighted.jpg
-arduino.json
+.vscode/arduino.json
+.vscode/c_cpp_properties.json
+.vscode/settings.json
+.vscode/blabla.txt
