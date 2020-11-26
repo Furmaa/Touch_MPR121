@@ -42,3 +42,6 @@ round_DEMO_highlighted.jpg
 .vscode/c_cpp_properties.json
 .vscode/settings.json
 .vscode/blabla.txt
+.vscode
+touch_mpr121.code-workspace
+

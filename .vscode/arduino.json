@@ -1,6 +1,0 @@
-{
-    "board": "arduino:avr:uno",
-    "sketch": "rect_DEMO_script\\rect_DEMO_script.ino",
-    "output": "C:/Users/User/Documents/Aron/VSC/ArduinoBuild",
-    "port": "COM4"
-}
