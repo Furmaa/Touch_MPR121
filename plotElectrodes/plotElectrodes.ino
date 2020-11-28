@@ -56,7 +56,6 @@ uint8_t release = 2;
 uint8_t elcount = 8; // number of electrodes to be used, max. 12
 uint16_t currbaseline[12] = {0};
 uint16_t filtered[12] = {0};
-char * const ELELABELS[12] = {0};
 const char ELE0LABEL[] = "ELE0:";
 const char ELE1LABEL[] = "ELE1:";
 const char ELE2LABEL[] = "ELE2:";
@@ -69,6 +68,11 @@ const char ELE8LABEL[] = "ELE8:";
 const char ELE9LABEL[] = "ELE9:";
 const char ELE10LABEL[] = "ELE10:";
 const char ELE11LABEL[] = "ELE11:";
+const char * const ELELABELS[12] = {
+  ELE0LABEL, ELE1LABEL, ELE2LABEL, ELE3LABEL,
+  ELE4LABEL, ELE5LABEL, ELE6LABEL, ELE7LABEL,
+  ELE8LABEL, ELE9LABEL, ELE10LABEL, ELE11LABEL
+};
 
 // define debounce: higher number may improve noise resistance. Range 0-15
 uint8_t debounce_touch = 5; // number of consecutively sensed touches to be discarded.
@@ -197,7 +201,7 @@ void loop() {
 
 for (uint8_t i = 0; i < (elcount-1); i++) {
   // diff = cap.baselineData(i) - cap.filteredData(i);
- Serial.print(i);
+ Serial.print(ELELABELS[i]);
  Serial.print(cap.filteredData(i));
  Serial.print(",");
   // Serial.print(cap.baselineData(i));
@@ -206,7 +210,7 @@ for (uint8_t i = 0; i < (elcount-1); i++) {
 //  Serial.print("\t");
 
 }
-Serial.print(elcount-1);
+Serial.print(ELELABELS[(elcount-1)]);
 Serial.println(cap.filteredData(elcount-1));
   
 }
