@@ -30,19 +30,28 @@ uint16_t currtouched = 0;
 uint16_t lastwake = 0;
 uint16_t currwake = 0;
 
+// Number of electrodes to be used, max. 12: 0,1,2....11
+const uint8_t ELCOUNT = 9;
+// Number of ref electrodes out of this: 0,1,2.....10 
+// always attach to higher PINs on board! E.g. touch PINs 0,1 and ref PINs 2,3,4... 
+const uint8_t REFCOUNT = 1; 
+uint8_t k = 0;
+
 // Initialize intensity values of the INWARDS and outwards
 // facing LED series for the square-round DEMO board.
 uint16_t inwardsintensity = 0;
 uint16_t outwardsintensity = 0;
-uint8_t cancellance = 0;
-const uint8_t CANCELLANCE_TH = 2;
-const uint8_t INWARDS_BASE = 0;
+uint16_t cancellance = 0;
+const uint8_t CANCELLANCE_TH = 1;
+const uint8_t INWARDS_BASE = 100;
+uint16_t slideIntensity = 0;
 
 // initialize arrays for basline and filtered output values of electrodes
-uint16_t firstbaseline[12] = {0};
-uint16_t currbaseline[12] = {0};
-uint16_t filtered[12] = {0};
-uint16_t intensity[12] = {0};
+uint16_t firstbaseline[ELCOUNT] = {0};
+uint16_t currbaseline[ELCOUNT] = {0};
+uint16_t filtered[ELCOUNT] = {0};
+uint16_t intensity[ELCOUNT] = {0};
+uint16_t lastintensity[ELCOUNT] = {0};
 
 // Change touch and release from default if needed in range 0-255
 // Touch condition: Baseline - filtered output > touch threshold
@@ -52,13 +61,6 @@ const uint8_t RELEASE = 2;
 // uint8_t touch = MPR121_TOUCH_THRESHOLD_DEFAULT;
 // uint8_t release = MPR121_RELEASE_THRESHOLD_DEFAULT;
 // (Product Specification sheet section 5.6)
-
-// Number of electrodes to be used, max. 12: 0,1,2....11
-const uint8_t ELCOUNT = 9;
-// Number of ref electrodes out of this: 0,1,2.....10 
-// always attach to higher PINs on board! E.g. touch PINs 0,1 and ref PINs 2,3,4... 
-const uint8_t REFCOUNT = 1; 
-uint8_t k = 0;
 
 // keep track of the timer overflow interrupts. Max value 255 for timers 0,2 on Arduino (here timer 2 is used)
 uint8_t ticking = 0;
@@ -80,6 +82,9 @@ const uint8_t DEBOUNCE_RELEASE = 0;
 // definition of ON/OFF state
 bool turned_on = false;
 bool turning = false;
+// definition of turnwheel/sliding state
+bool slidingLeft = false;
+bool slidingRight = false;
 
 // Active electrode configuration: see Adafruit_MPR121_mod.h for details
 const uint8_t ECR = MPR121_BL_TRACKING_ALL + MPR121_ELEPROX_EN_OFF + ELCOUNT; 
@@ -211,22 +216,35 @@ void loop() {
     if (currtouched & _BV(i)) {
       currwake |= _BV(i);
       
-      if ( (i+1) == (ELCOUNT - REFCOUNT) ) { currwake |= _BV(1); }
-      else if ( ((i+1) > 1) && ( (i+1) < (ELCOUNT - REFCOUNT) ) ) { currwake |= _BV(i+1); }
+      if ( (i+1) == (ELCOUNT - REFCOUNT) ) 
+      { 
+        currwake |= _BV(1); 
+      }
+      else if ( ((i+1) > 1) && ( (i+1) < (ELCOUNT - REFCOUNT) ) ) 
+      { 
+        currwake |= _BV(i+1); 
+      }
 
-      if ( (i-1) == 0 ) { currwake |= _BV(ELCOUNT - REFCOUNT - 1); }
-      else if ( ( (i-1) > 0 ) && ( (i-1) < (ELCOUNT - REFCOUNT - 1) ) ) { currwake |= _BV(i-1); }
+      if ( (i-1) == 0 ) 
+      { 
+        currwake |= _BV(ELCOUNT - REFCOUNT - 1); 
+      }
+      else if ( ( (i-1) > 0 ) && ( (i-1) < (ELCOUNT - REFCOUNT - 1) ) ) 
+      { 
+        currwake |= _BV(i-1); 
+      }
     }
 
   }
 
   for (uint8_t i=0; i<ELCOUNT; i++) 
   {
+    lastintensity[i] = intensity[i]; // save state for turnwheel slide direction tracking
     if (currwake & _BV(i))
     {
       filtered[i] = cap.filteredData(i);
       currbaseline[i] = cap.baselineData(i);
-      if (currbaseline[i] > (filtered[i] + CANCELLANCE_TH)) {intensity[i] = currbaseline[i] - filtered[i] - CANCELLANCE_TH;}
+      if (currbaseline[i] > (filtered[i] + TOUCH)) {intensity[i] = currbaseline[i] - filtered[i] - TOUCH;}
       else {intensity[i] = 0;}     
     }
     else
@@ -244,41 +262,52 @@ void loop() {
 //  }
 
   // ON/OFF as the 0th electrode is touched
-  if //(!(currtouched & _BV(8)) && (currtouched & _BV(0)) && !(lasttouched & _BV(0)) && !(currtouched & _BV(1)) && !(currtouched & _BV(7)) && (tick_count2 >= TICK_OFF)){
-    ( (currtouched & _BV(0)) && !(lasttouched & _BV(0)) && !(currtouched & ~_BV(0)) ){
-    if (manners(turned_on, &turning, &ticking, PAUSE_TICKS, &inwardsintensity, &outwardsintensity, &blink_count, BLINKS)) {}
-    else {Serial.println("ERROR: this fella has no manners...");}
+  if ( (currtouched & _BV(0)) && !(lasttouched & _BV(0)) && !(currtouched & ~_BV(0)) )
+  {
+    if (manners(turned_on, &turning, &ticking, PAUSE_TICKS, &inwardsintensity, &outwardsintensity, &blink_count, BLINKS)) 
+    {
+      Serial.println("ERROR: this fella has no manners...");
+    }
   }
     
-  cancellance = intensity[8]*3;
+  cancellance = intensity[8]*2;
   
-  if (turned_on && !turning) {
-    inwardsintensity = (uint16_t)(intensity[1] + intensity[3] + intensity[5] + intensity[7]);
-    outwardsintensity= (uint16_t)(intensity[2] + intensity[4] + intensity[6]);
-      if ( inwardsintensity >= cancellance) {
-        inwardsintensity -= cancellance;
-      }
-      else {inwardsintensity = 0;}
-    inwardsintensity = (inwardsintensity<<1) + INWARDS_BASE;
-
-    if ( outwardsintensity >= cancellance) {
-      outwardsintensity -= cancellance;  
+  if (turned_on && !turning) 
+  {
+    slideIntensity = calcSliding(cancellance, &intensity[1], &intensity[ELCOUNT - REFCOUNT - 1], 
+    &lastintensity[1], &lastintensity[ELCOUNT - REFCOUNT - 1], &slidingRight, &slidingLeft);
+  
+    if (slidingRight) 
+    {
+      outwardsintensity += slideIntensity;
+      inwardsintensity += slideIntensity;
     }
-    else {outwardsintensity = 0;}
-    outwardsintensity<<1;
+    else if (slidingLeft)
+    {
+      if (slideIntensity >= outwardsintensity) 
+      {
+        outwardsintensity = 0;
+        inwardsintensity = 0;
+      }
+      else 
+      {
+        outwardsintensity -= slideIntensity;
+        inwardsintensity -= slideIntensity;
+      }
+    } 
   }
   else if (!turned_on && !turning)
   {
     inwardsintensity = 0;
     outwardsintensity = 0;
   }
-  else if (turned_on && turning) { //while turning off...
+  else if (turned_on && turning) //while turning off...
+  { 
     inwardsintensity = 255;
     outwardsintensity = 255;
   }
-  else if (!turned_on && turning && (ticking == 0)) { //while turning on...
-//    inwardsintensity = ~(inwardsintensity|0);
-//    outwardsintensity = ~(outwardsintensity|0);
+  else if (!turned_on && turning && (ticking == 0)) //while turning on...
+  { 
     if ((blink_count % 2) == 0) {
       inwardsintensity = 255; 
       outwardsintensity = 255; 
@@ -292,8 +321,11 @@ void loop() {
       blink_count--;
       }
   }
-  if (inwardsintensity >= 200){
-    inwardsintensity = 255;
+
+  // PWM duty cycle above 200/255 yields little visible increase in radiance, but increases noise greatly:
+  // Let's avoid it!
+  if (inwardsintensity >= 170){
+    inwardsintensity = 170;
     digitalWrite(INWARDS, HIGH);
   }
   else if (inwardsintensity <= 0){
@@ -303,8 +335,8 @@ void loop() {
   else {
     analogWrite(INWARDS, inwardsintensity);
   }
-  if (outwardsintensity >= 200){
-    outwardsintensity = 255;
+  if (outwardsintensity >= 170){ 
+    outwardsintensity = 170;
     digitalWrite(OUTWARDS, HIGH);
   }
   else if (outwardsintensity <= 0){
@@ -355,6 +387,102 @@ ISR(TIMER2_OVF_vect)          // timer overflow interrupt service routine
   }
 }
 
+uint16_t calcSliding(uint16_t cancelval, uint16_t * intstart, uint16_t * intend, 
+uint16_t * lastintstart, uint16_t * lastintend, bool * rightslide, bool * leftslide)
+{
+  uint16_t slideval = 0;
+  uint16_t slideleft = 0;
+  uint16_t slideright = 0;
+  uint16_t * prev = NULL;
+  uint16_t * next = NULL;
+  uint16_t * lastprev = NULL;
+  uint16_t * lastnext = NULL;
+  uint16_t * temp = intstart;
+  uint16_t * lasttemp = lastintstart;
+
+  while (temp != (intend + 1))
+  {
+    if (temp == intstart) 
+    { 
+      prev = intend; 
+      lastprev = lastintend; 
+      next = temp + 1; 
+      lastnext = lasttemp + 1;
+    }
+    else if (temp == intend) 
+    { 
+      prev = temp - 1; 
+      lastprev = lasttemp - 1; 
+      next = intstart; 
+      lastnext = lastintstart;
+    }
+    else 
+    { 
+      prev = temp - 1; 
+      lastprev = lasttemp - 1; 
+      next = temp + 1; 
+      lastnext = lasttemp + 1;
+    } 
+
+    if ( (*prev > *lastprev) && (*temp < *lasttemp) )
+    {
+      slideleft += (*lasttemp - *temp) + (*prev - *lastprev);
+    }
+    else if ( (*prev < *lastprev) && (*temp > *lasttemp) )
+    {
+      slideright += (*temp - *lasttemp) + (*lastprev - *prev);
+    }
+    if ( (*next < *lastnext) && (*temp > *lasttemp) )
+    {
+      slideleft += (*temp - *lasttemp) + (*lastnext - *next);
+    }
+    else if ( (*next > *lastnext) && (*temp < *lasttemp) )
+    {
+      slideright += (*lasttemp - *temp) + (*next - *lastnext);
+    }
+
+    if (slideleft > cancelval) 
+    {
+      slideleft -= cancelval;
+    } 
+    else
+    {
+      slideleft = 0;
+    }
+        if (slideright > cancelval) 
+    {
+      slideright -= cancelval;
+    } 
+    else
+    {
+      slideright = 0;
+    }
+
+    temp++;
+    lasttemp++;
+  }
+
+  if (slideright > slideleft)
+    {
+      *rightslide = true;
+      *leftslide = false;
+      slideval = slideright - slideleft;
+    }
+    else if (slideright < slideleft)
+    {
+      *rightslide = false;
+      *leftslide = true;
+      slideval = slideleft - slideright;
+    }
+    else
+    {
+      *rightslide = false;
+      *leftslide = false;
+    }
+
+  return slideval;
+}
+
 uint8_t manners (bool turnedon, bool * turn, uint8_t * ticks, uint8_t pause, uint16_t * in_intensity, uint16_t * out_intensity, uint8_t * blinkcount, uint8_t blinkinit) {
   if (!turnedon && !(*turn) ) { //then start turning on...
     *turn = 1;
@@ -371,7 +499,7 @@ uint8_t manners (bool turnedon, bool * turn, uint8_t * ticks, uint8_t pause, uin
     *out_intensity = 255;    
     Serial.println("Turning off!"); 
   }
-  return (uint8_t) 1;
+  return (uint8_t) 0;
 }
 
 void printStatistic (Adafruit_MPR121 * obj, uint8_t eleccount, uint8_t count) {
