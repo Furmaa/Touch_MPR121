@@ -11,6 +11,9 @@
 + flowcharts, assembly documentation: program_flowcharts.pptx, circuit_assembly.docx
 + circuit schematics
 + Adafruit_MPR121_mod: modified Adafruit library, copy this in your local Arduino library
+
+# Lacking:
+
 - PCB for integrated support circuit
 - detailed Arduino code explanation: hints and remarks commented @ crucial parts in the sketch .ino files and the modified Adafruit library files .h .cpp
 
