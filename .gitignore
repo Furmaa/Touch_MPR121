@@ -1,14 +1,13 @@
 Touch_MPR121_19052020.zip
 Touch_MPR121_08062020.zip
-round_DEMO_active_shielding.mp4
-Injection-molded_Demo_Touch_LED.pdf
-Conrad_Einkaufswagen.pdf
-Bedarfsanforderung_UVgo_v1a _template.pdf
-Bedarfsanforderung_UVgo_v1a _23102020.pdf
-Bedarfsanforderung_UVgo_v1a _12102020.pdf
-Bedarfsanforderung_UVgo_v1a _08102020.pdf
-20200515_133025_001.mp4
 ~$PrintConfig_log_Julian_15052020.xlsx
+20200515_133025_001.mp4
+Bedarfsanforderung_UVgo_v1a _08102020.pdf
+Bedarfsanforderung_UVgo_v1a _12102020.pdf
+Bedarfsanforderung_UVgo_v1a _23102020.pdf
+Bedarfsanforderung_UVgo_v1a _template.pdf
+Conrad_Einkaufswagen.pdf
+Injection-molded_Demo_Touch_LED.pdf
 Adafruit_MPR121_Arduino-shield/Adafruit MPR121 Capacitive Touch Shield-cache.lib
 Adafruit_MPR121_Arduino-shield/Adafruit MPR121 Capacitive Touch Shield.pro
 Adafruit_MPR121_Arduino-shield/Adafruit MPR121 Capacitive Touch Shield.sch
@@ -35,4 +34,18 @@ Adafruit_MPR121_Arduino-shield/Adafruit MPR121 Capacitive Touch Shield.pretty/PC
 Adafruit_MPR121_Arduino-shield/Adafruit MPR121 Capacitive Touch Shield.pretty/QFN20_3MM_NOTHERMAL.kicad_mod
 Adafruit_MPR121_Arduino-shield/Adafruit MPR121 Capacitive Touch Shield.pretty/SOT23-5.kicad_mod
 Adafruit_MPR121_Arduino-shield/Adafruit MPR121 Capacitive Touch Shield.pretty/SOT23-WIDE.kicad_mod
+<<<<<<< HEAD
 program_flowcharts.pptx
+=======
+round_DEMO.jpg
+round_DEMO_slider.png
+round_DEMO_highlighted.jpg
+.vscode/arduino.json
+.vscode/c_cpp_properties.json
+.vscode/settings.json
+.vscode/blabla.txt
+.vscode
+touch_mpr121.code-workspace
+ArduinoBuild
+
+>>>>>>> 1fd02a657b4a475aa934d30928191493bda81eb4
