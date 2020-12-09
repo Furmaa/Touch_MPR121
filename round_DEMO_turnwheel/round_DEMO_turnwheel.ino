@@ -63,7 +63,7 @@ const uint8_t RELEASE = 2;
 // (Product Specification sheet section 5.6)
 
 // keep track of the timer overflow interrupts. Max value 255 for timers 0,2 on Arduino (here timer 2 is used)
-uint8_t ticking = 0;
+volatile uint8_t ticking = 0; //because it is modified in ISR needs to be defined as volatile!
 const uint8_t TICK_OFF = 61; //61 ticks means a second, 1 tick is one counter overflow
 // turn ON blinks
 uint8_t blink_count = 0;
@@ -80,8 +80,8 @@ const uint8_t DEBOUNCE_RELEASE = 0;
 // (Product Specification sheet section 5.7)
 
 // definition of ON/OFF state
-bool turned_on = false;
-bool turning = false;
+volatile bool turned_on = false; //because it is modified in ISR needs to be defined as volatile!
+volatile bool turning = false; //because it is modified in ISR needs to be defined as volatile!
 // definition of turnwheel/sliding state
 bool slidingLeft = false;
 bool slidingRight = false;
@@ -264,7 +264,7 @@ void loop() {
   // ON/OFF as the 0th electrode is touched
   if ( (currtouched & _BV(0)) && !(lasttouched & _BV(0)) && !(currtouched & ~_BV(0)) )
   {
-    if (manners(turned_on, &turning, &ticking, PAUSE_TICKS, &inwardsintensity, &outwardsintensity, &blink_count, BLINKS)) 
+    if (manners(turned_on, &turning, &ticking, PAUSE_TICKS, TICK_OFF, &inwardsintensity, &outwardsintensity, &blink_count, BLINKS)) 
     {
       Serial.println("ERROR: this fella has no manners...");
     }
@@ -371,19 +371,19 @@ ISR(TIMER2_OVF_vect)          // timer overflow interrupt service routine
 {
   if (ticking > 0) {
     ticking--; 
-    Serial.print("ticking: "); 
-    Serial.println(ticking);
+    // Serial.print("ticking: "); // Serial print occupies ISR for too long! Enable only for debugging.
+    // Serial.println(ticking);
     }
   
   if ((ticking == 0) && turned_on && turning) {
     turned_on = 0;
     turning = 0;
-    Serial.println("Turned off."); 
+    // Serial.println("Turned off."); 
   }
   else if ((ticking == 0) && !turned_on && turning && (blink_count == 0)) {
     turned_on = 1;
     turning = 0;
-    Serial.println("Turned on."); 
+    // Serial.println("Turned on."); 
   }
 }
 
@@ -483,7 +483,7 @@ uint16_t * lastintstart, uint16_t * lastintend, bool * rightslide, bool * leftsl
   return slideval;
 }
 
-uint8_t manners (bool turnedon, bool * turn, uint8_t * ticks, uint8_t pause, uint16_t * in_intensity, uint16_t * out_intensity, uint8_t * blinkcount, uint8_t blinkinit) {
+uint8_t manners (volatile bool turnedon, volatile bool * turn, volatile uint8_t * ticks, uint8_t pause, uint8_t offticks, uint16_t * in_intensity, uint16_t * out_intensity, uint8_t * blinkcount, uint8_t blinkinit) {
   if (!turnedon && !(*turn) ) { //then start turning on...
     *turn = 1;
     *ticks = pause;
@@ -494,7 +494,7 @@ uint8_t manners (bool turnedon, bool * turn, uint8_t * ticks, uint8_t pause, uin
   }
   else if (turnedon && !(*turn) ) { //then start turning off...
     *turn = 1;
-    *ticks = TICK_OFF;
+    *ticks = offticks;
     *in_intensity = 255; //and say goodbye!
     *out_intensity = 255;    
     Serial.println("Turning off!"); 
