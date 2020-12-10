@@ -234,13 +234,13 @@ F 3 "" H 10000 5050 118 0001 C CNN
 	1    0    0    1   
 $EndComp
 $Comp
-L Adafruit_MPR121_Capacitive_Touch_Shield-eagle-import:ARDUINO_R3_ICSP 1
+L Adafruit_MPR121_Capacitive_Touch_Shield-eagle-import:ARDUINO_R3_ICSP U1
 U 1 1 5FB5395C
 P 2300 5750
-F 0 "1" H 2350 5800 118 0001 C CNN
+F 0 "U1" H 2350 5800 118 0001 C CNN
 F 1 "ARDUINO_R3_ICSP" H 2300 5750 118 0001 C CNN
 F 2 "" H 2300 5750 118 0001 C CNN
-F 3 "" H 2300 5750 118 0001 C CNN
+F 3 "https://store.arduino.cc/arduino-uno-rev3" H 2300 5750 118 0001 C CNN
 	1    2300 5750
 	1    0    0    -1  
 $EndComp
@@ -255,13 +255,13 @@ Arduino_supply
 Text GLabel 3500 6050 3    50   Input ~ 0
 +5V
 $Comp
-L Adafruit_MPR121_Capacitive_Touch_Shield-eagle-import:MPR121_Arduino_shield 2
+L Adafruit_MPR121_Capacitive_Touch_Shield-eagle-import:MPR121_Arduino_shield U2
 U 1 1 5FB78377
 P 6650 5750
-F 0 "2" H 6700 5800 118 0001 C CNN
+F 0 "U2" H 6700 5800 118 0001 C CNN
 F 1 "MPR121_Arduino_shield" H 7900 5900 118 0001 C CNN
 F 2 "" H 6650 5750 118 0001 C CNN
-F 3 "" H 6650 5750 118 0001 C CNN
+F 3 "https://www.adafruit.com/product/2024" H 6650 5750 118 0001 C CNN
 	1    6650 5750
 	1    0    0    -1  
 $EndComp
@@ -366,13 +366,13 @@ Wire Wire Line
 Wire Wire Line
 	3600 5950 3650 5950
 $Comp
-L Adafruit_MPR121_Capacitive_Touch_Shield-eagle-import:VREG_board_MAKERFACTORY U1
+L Adafruit_MPR121_Capacitive_Touch_Shield-eagle-import:VREG_board_MAKERFACTORY U4
 U 1 1 5FB9DFE2
 P 8850 1950
-F 0 "U1" H 8850 2297 42  0000 C CNN
+F 0 "U4" H 8850 2297 42  0001 C CNN
 F 1 "VREG_board_MAKERFACTORY" H 8850 2218 42  0000 C CNN
 F 2 "" H 8850 1950 118 0001 C CNN
-F 3 "" H 8850 1950 118 0001 C CNN
+F 3 "https://asset.conrad.com/media10/add/160267/c1/-/gl/002134132ML00/mode-demploi-2134132-makerfactory-mf-6402396-1-pcs.pdf" H 8850 1950 118 0001 C CNN
 	1    8850 1950
 	1    0    0    -1  
 $EndComp
@@ -436,12 +436,10 @@ Text Label 3950 1400 1    50   ~ 0
 GND
 Text Label 3850 1400 1    50   ~ 0
 5V
-NoConn ~ 3850 1050
 Wire Wire Line
 	3850 1400 3850 1150
 Text Label 3750 1400 1    50   ~ 0
 3V
-NoConn ~ 3750 1050
 Wire Wire Line
 	3750 1400 3750 1150
 Text Label 4550 2850 3    50   ~ 0
@@ -499,7 +497,6 @@ Wire Wire Line
 	8200 1850 8450 1850
 Wire Wire Line
 	8300 2050 8450 2050
-NoConn ~ 9300 1850
 Wire Wire Line
 	9250 2050 9400 2050
 Wire Wire Line
@@ -571,4 +568,92 @@ Text Label 800  2200 0    50   ~ 0
 LED_array
 Text Label 800  2000 0    50   ~ 0
 LED_ring
+Text GLabel 8550 3000 1    50   Input ~ 0
+D2
+Text GLabel 4200 3450 1    50   Input ~ 0
+D2
+Wire Wire Line
+	4200 3550 4200 3450
+NoConn ~ 9250 1850
+NoConn ~ 6850 3550
+NoConn ~ 7150 3550
+NoConn ~ 7350 3550
+NoConn ~ 7450 3550
+NoConn ~ 7550 3550
+NoConn ~ 7750 3550
+NoConn ~ 7850 3550
+NoConn ~ 8050 3550
+NoConn ~ 8250 3550
+NoConn ~ 8350 3550
+NoConn ~ 8650 3550
+NoConn ~ 8750 3550
+NoConn ~ 8850 5950
+NoConn ~ 8750 5950
+NoConn ~ 8650 5950
+NoConn ~ 8550 5950
+NoConn ~ 8450 5950
+NoConn ~ 8350 5950
+NoConn ~ 7750 5950
+NoConn ~ 7650 5950
+NoConn ~ 7550 5950
+NoConn ~ 7450 5950
+NoConn ~ 8000 5050
+NoConn ~ 8000 4900
+NoConn ~ 8000 4750
+NoConn ~ 8850 4750
+NoConn ~ 8850 4900
+NoConn ~ 9900 4650
+NoConn ~ 9900 4550
+NoConn ~ 9900 4750
+NoConn ~ 9900 4850
+NoConn ~ 9900 4950
+NoConn ~ 9900 5050
+NoConn ~ 7100 5050
+NoConn ~ 7100 4900
+NoConn ~ 7100 4750
+NoConn ~ 8200 4450
+NoConn ~ 8200 4250
+NoConn ~ 8600 4550
+NoConn ~ 8600 4350
+NoConn ~ 8600 4150
+NoConn ~ 8200 4050
+NoConn ~ 2800 3550
+NoConn ~ 3000 3550
+NoConn ~ 3100 3550
+NoConn ~ 3200 3550
+NoConn ~ 3400 3550
+NoConn ~ 3500 3550
+NoConn ~ 3700 3550
+NoConn ~ 3900 3550
+NoConn ~ 4000 3550
+NoConn ~ 4300 3550
+NoConn ~ 4400 3550
+NoConn ~ 3200 5950
+NoConn ~ 3300 5950
+NoConn ~ 3400 5950
+NoConn ~ 4000 5950
+NoConn ~ 4100 5950
+NoConn ~ 4200 5950
+NoConn ~ 4300 5950
+NoConn ~ 4400 5950
+NoConn ~ 4500 5950
+NoConn ~ 4550 3100
+NoConn ~ 4750 3100
+NoConn ~ 3750 1150
+NoConn ~ 3850 1150
+NoConn ~ 4300 4450
+NoConn ~ 4300 4650
+NoConn ~ 4300 4850
+NoConn ~ 4700 4950
+NoConn ~ 4700 4750
+NoConn ~ 4700 4550
+Wire Wire Line
+	8550 3550 8550 3100
+Wire Wire Line
+	6750 3550 6750 3100
+Wire Wire Line
+	6750 3100 8550 3100
+Connection ~ 8550 3100
+Wire Wire Line
+	8550 3100 8550 3000
 $EndSCHEMATC

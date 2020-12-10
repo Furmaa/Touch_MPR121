@@ -1,3 +1,4 @@
 (sym_lib_table
   (lib (name Adafruit_MPR121_Capacitive_Touch_Shield-eagle-import)(type Legacy)(uri C:/Users/User/Documents/Aron/IZM/Touch_MPR121/Adafruit_MPR121_Arduino-shield/Adafruit_MPR121_Capacitive_Touch_Shield-eagle-import.lib)(options "")(descr ""))
+  (lib (name DEMO_touch_MPR121_circuit-eagle-import)(type Legacy)(uri ${KIPRJMOD}/DEMO_touch_MPR121_circuit-eagle-import.lib)(options "")(descr ""))
 )
