@@ -657,4 +657,6 @@ F 3 "~" H 1350 1900 118 0001 C CNN
 $EndComp
 Connection ~ 1450 1700
 Connection ~ 1450 2200
+Text Label 10100 4900 0    50   ~ 0
+Apply_necessary_no.
 $EndSCHEMATC

@@ -4,78 +4,46 @@ EELAYER END
 $Descr A4 11693 8268
 encoding utf-8
 Sheet 1 1
-Title ""
-Date ""
-Rev ""
-Comp ""
-Comment1 ""
-Comment2 ""
-Comment3 ""
+Title "Support electronics for row LED switching and capacitive sens."
+Date "01/11/2021 (mm/dd/yyyy)"
+Rev "v1"
+Comp "IZM Fraunhofer"
+Comment1 "v0: LED switching schematics"
+Comment2 "v0.1: + cap. sensing, and all neccessary hardware included"
+Comment3 "v1: LED power pins reordered for easier assembly; R2 value changed, R9 added"
 Comment4 ""
 $EndDescr
-Text GLabel 2950 1200 1    50   Input ~ 0
+Text GLabel 3000 1200 1    50   Input ~ 0
 +21V
-$Comp
-L Transistor_FET:IPP060N06N Q2
-U 1 1 5F4C3589
-P 5450 2000
-F 0 "Q2" H 5654 2000 50  0000 L CNN
-F 1 "IPP060N06N" H 5655 1955 50  0001 L CNN
-F 2 "Package_TO_SOT_THT:TO-220-3_Vertical" H 5700 1925 50  0001 L CIN
-F 3 "https://www.infineon.com/dgdl/Infineon-IPP060N06N-DS-v02_02-en.pdf?fileId=db3a30433727a44301372c06d9d7498a" H 5450 2000 50  0001 L CNN
-	1    5450 2000
-	0    -1   -1   0   
-$EndComp
 $Comp
 L Device:R R1
 U 1 1 5F4D0236
 P 2550 1600
 F 0 "R1" V 2343 1600 50  0000 C CNN
 F 1 "R680" V 2434 1600 50  0000 C CNN
-F 2 "" V 2480 1600 50  0001 C CNN
+F 2 "lead wire" V 2480 1600 50  0001 C CNN
 F 3 "~" H 2550 1600 50  0001 C CNN
 	1    2550 1600
 	0    1    1    0   
 $EndComp
 $Comp
-L Connector:Conn_01x10_Male J1
-U 1 1 5F4D07C0
-P 1250 1900
-F 0 "J1" H 1358 2481 50  0000 C CNN
-F 1 "Conn_01x10_Male" H 1358 2565 50  0000 C CNN
-F 2 "" H 1250 1900 50  0001 C CNN
-F 3 "~" H 1250 1900 50  0001 C CNN
-	1    1250 1900
-	1    0    0    -1  
-$EndComp
-Wire Wire Line
-	1450 1700 1450 1800
-Wire Wire Line
-	1450 2200 1450 2100
-Wire Wire Line
-	2700 1600 2950 1600
-$Comp
 L Device:R R2
 U 1 1 5F4DAEA4
 P 2550 2000
 F 0 "R2" V 2343 2000 50  0000 C CNN
-F 1 "R220" V 2434 2000 50  0000 C CNN
-F 2 "" V 2480 2000 50  0001 C CNN
+F 1 "R120" V 2434 2000 50  0000 C CNN
+F 2 "lead wire" V 2480 2000 50  0001 C CNN
 F 3 "~" H 2550 2000 50  0001 C CNN
 	1    2550 2000
 	0    1    1    0   
 $EndComp
-Wire Wire Line
-	2700 2000 2950 2000
-Wire Wire Line
-	2700 2400 2950 2400
 $Comp
 L Device:R R3
 U 1 1 5F4D9030
 P 2550 2400
 F 0 "R3" V 2343 2400 50  0000 C CNN
 F 1 "R680" V 2434 2400 50  0000 C CNN
-F 2 "" V 2480 2400 50  0001 C CNN
+F 2 "lead wire" V 2480 2400 50  0001 C CNN
 F 3 "~" H 2550 2400 50  0001 C CNN
 	1    2550 2400
 	0    1    1    0   
@@ -83,24 +51,15 @@ $EndComp
 $Comp
 L Transistor_FET:IPP060N06N Q3
 U 1 1 5F4C5F7E
-P 5750 2750
-F 0 "Q3" H 5954 2750 50  0000 L CNN
-F 1 "IPP060N06N" H 5955 2705 50  0001 L CNN
-F 2 "Package_TO_SOT_THT:TO-220-3_Vertical" H 6000 2675 50  0001 L CIN
-F 3 "https://www.infineon.com/dgdl/Infineon-IPP060N06N-DS-v02_02-en.pdf?fileId=db3a30433727a44301372c06d9d7498a" H 5750 2750 50  0001 L CNN
-	1    5750 2750
+P 5750 2650
+F 0 "Q3" H 5954 2650 50  0000 L CNN
+F 1 "IPP060N06N" H 5955 2605 50  0001 L CNN
+F 2 "Package_TO_SOT_THT:TO-220-3_Vertical" H 6000 2575 50  0001 L CIN
+F 3 "https://www.infineon.com/dgdl/Infineon-IPP060N06N-DS-v02_02-en.pdf?fileId=db3a30433727a44301372c06d9d7498a" H 5750 2650 50  0001 L CNN
+	1    5750 2650
 	0    -1   -1   0   
 $EndComp
-Wire Wire Line
-	4300 1700 4300 2650
-Wire Wire Line
-	4300 2650 5550 2650
-Connection ~ 1450 1700
-Wire Wire Line
-	5650 1900 6300 1900
 Connection ~ 6300 1900
-Wire Wire Line
-	5950 2650 6300 2650
 Text GLabel 5100 3150 3    50   Input ~ 0
 D10
 $Comp
@@ -109,7 +68,7 @@ U 1 1 5F4F6F8A
 P 6050 1800
 F 0 "R6" V 5843 1800 50  0000 C CNN
 F 1 "R220k" V 5934 1800 50  0000 C CNN
-F 2 "" V 5980 1800 50  0001 C CNN
+F 2 "lead wire" V 5980 1800 50  0001 C CNN
 F 3 "~" H 6050 1800 50  0001 C CNN
 	1    6050 1800
 	0    1    1    0   
@@ -120,7 +79,7 @@ U 1 1 5F4F8824
 P 6050 2200
 F 0 "R7" V 5843 2200 50  0000 C CNN
 F 1 "R220k" V 5934 2200 50  0000 C CNN
-F 2 "" V 5980 2200 50  0001 C CNN
+F 2 "lead wire" V 5980 2200 50  0001 C CNN
 F 3 "~" H 6050 2200 50  0001 C CNN
 	1    6050 2200
 	0    1    1    0   
@@ -131,7 +90,7 @@ U 1 1 5F4F8D88
 P 6050 2950
 F 0 "R8" V 5843 2950 50  0000 C CNN
 F 1 "R220k" V 5934 2950 50  0000 C CNN
-F 2 "" V 5980 2950 50  0001 C CNN
+F 2 "lead wire" V 5980 2950 50  0001 C CNN
 F 3 "~" H 6050 2950 50  0001 C CNN
 	1    6050 2950
 	0    1    1    0   
@@ -139,17 +98,9 @@ $EndComp
 Wire Wire Line
 	6200 2950 6300 2950
 Wire Wire Line
-	6300 2950 6300 2650
-Wire Wire Line
-	5900 2200 5450 2200
-Wire Wire Line
 	5750 2950 5900 2950
 Text GLabel 5750 3150 3    50   Input ~ 0
 D3
-Connection ~ 5750 2950
-Wire Wire Line
-	4550 2300 4550 1500
-Connection ~ 6300 2650
 Wire Wire Line
 	6300 1500 6300 1900
 Wire Wire Line
@@ -157,51 +108,40 @@ Wire Wire Line
 Wire Wire Line
 	6200 2200 6300 2200
 Wire Wire Line
-	6300 2200 6300 2650
+	6300 2200 6300 2550
 Connection ~ 6200 2200
 Text Label 1700 2100 0    50   ~ 0
 6.2÷0.24=26mA
 Wire Wire Line
 	1450 2400 2400 2400
 Wire Wire Line
-	1450 2000 2400 2000
-Wire Wire Line
-	1450 1600 2400 1600
+	1450 1600 1500 1600
 Text Label 1700 1600 0    50   ~ 0
 4.2÷0.68=6mA
-Text Label 2950 1600 0    50   ~ 0
+Text Label 3000 1600 0    50   ~ 0
 21-6*2.8=4.2V
 Text Label 1700 2000 0    50   ~ 0
 1.4÷0.22=6mA
 Wire Wire Line
-	2950 1200 2950 1600
-Connection ~ 2950 1600
+	3000 1200 3000 1600
 Wire Wire Line
-	2950 1600 2950 2000
-Connection ~ 2950 2000
+	3000 1600 3000 2000
+Connection ~ 3000 2000
 Wire Wire Line
-	2950 2000 2950 2400
+	3000 2000 3000 2400
 Wire Wire Line
-	1450 1500 4550 1500
-Connection ~ 4550 1500
+	1450 1500 1500 1500
 Wire Wire Line
-	1450 2300 4550 2300
-Wire Wire Line
-	1450 1900 5250 1900
-Wire Wire Line
-	1450 1700 4300 1700
-Wire Wire Line
-	1450 2200 3050 2200
-Text Label 2950 2000 0    50   ~ 0
+	1450 1700 1650 1700
+Text Label 3000 2000 0    50   ~ 0
 21-7*2.8=1.4V
-Connection ~ 1450 2200
 $Comp
 L Device:R R4
 U 1 1 5F785CCC
 P 3200 2200
 F 0 "R4" V 3348 2200 50  0000 C CNN
 F 1 "R120" V 3084 2200 50  0000 C CNN
-F 2 "" V 3130 2200 50  0001 C CNN
+F 2 "lead wire" V 3130 2200 50  0001 C CNN
 F 3 "~" H 3200 2200 50  0001 C CNN
 	1    3200 2200
 	0    1    1    0   
@@ -212,7 +152,7 @@ U 1 1 5F786489
 P 3500 2200
 F 0 "R5" V 3647 2200 50  0000 C CNN
 F 1 "R120" V 3384 2200 50  0000 C CNN
-F 2 "" V 3430 2200 50  0001 C CNN
+F 2 "lead wire" V 3430 2200 50  0001 C CNN
 F 3 "~" H 3500 2200 50  0001 C CNN
 	1    3500 2200
 	0    1    1    0   
@@ -229,7 +169,7 @@ P 10000 5050
 F 0 "JP1" H 9900 4264 59  0000 C CNN
 F 1 "HEADER-1X10" H 9900 4369 59  0000 C CNN
 F 2 "" H 10000 5050 118 0001 C CNN
-F 3 "" H 10000 5050 118 0001 C CNN
+F 3 "~" H 10000 5050 118 0001 C CNN
 	1    10000 5050
 	1    0    0    1   
 $EndComp
@@ -398,14 +338,7 @@ Wire Notes Line
 Wire Wire Line
 	5750 3150 5750 2950
 Wire Wire Line
-	5450 2200 5450 3150
-Connection ~ 5450 2200
-Wire Wire Line
 	5300 1500 6300 1500
-Wire Wire Line
-	4550 1500 4900 1500
-Wire Wire Line
-	5100 1800 5900 1800
 $Comp
 L Transistor_FET:IPP060N06N Q1
 U 1 1 5F4BE07F
@@ -649,11 +582,108 @@ NoConn ~ 4700 4750
 NoConn ~ 4700 4550
 Wire Wire Line
 	8550 3550 8550 3100
-Wire Wire Line
-	6750 3550 6750 3100
-Wire Wire Line
-	6750 3100 8550 3100
 Connection ~ 8550 3100
 Wire Wire Line
 	8550 3100 8550 3000
+Wire Wire Line
+	6850 3550 6850 3100
+Wire Wire Line
+	6850 3100 8550 3100
+NoConn ~ 6750 3550
+$Comp
+L Adafruit_MPR121_Capacitive_Touch_Shield-eagle-import:HEADER-1X10 JP2
+U 1 1 5FFD09A4
+P 1350 1900
+F 0 "JP2" H 1250 1114 59  0000 C CNN
+F 1 "HEADER-1X10" H 1250 1219 59  0000 C CNN
+F 2 "" H 1350 1900 118 0001 C CNN
+F 3 "~" H 1350 1900 118 0001 C CNN
+	1    1350 1900
+	-1   0    0    -1  
+$EndComp
+Text Label 10100 4900 0    50   ~ 0
+Apply_necessary_no.
+Wire Wire Line
+	1500 1600 1500 1500
+Connection ~ 1500 1500
+Wire Wire Line
+	1650 1700 1650 1600
+Wire Wire Line
+	1650 1600 2400 1600
+Wire Wire Line
+	1650 1800 1450 1800
+Wire Wire Line
+	5100 1800 5900 1800
+Wire Wire Line
+	5650 1900 6300 1900
+Connection ~ 5450 2200
+Wire Wire Line
+	5450 2200 5450 3150
+Wire Wire Line
+	5900 2200 5450 2200
+Wire Wire Line
+	1650 1900 1650 1800
+$Comp
+L Transistor_FET:IPP060N06N Q2
+U 1 1 5F4C3589
+P 5450 2000
+F 0 "Q2" H 5654 2000 50  0000 L CNN
+F 1 "IPP060N06N" H 5655 1955 50  0001 L CNN
+F 2 "Package_TO_SOT_THT:TO-220-3_Vertical" H 5700 1925 50  0001 L CIN
+F 3 "https://www.infineon.com/dgdl/Infineon-IPP060N06N-DS-v02_02-en.pdf?fileId=db3a30433727a44301372c06d9d7498a" H 5450 2000 50  0001 L CNN
+	1    5450 2000
+	0    -1   -1   0   
+$EndComp
+Wire Wire Line
+	1650 1900 5250 1900
+$Comp
+L Device:R R9
+U 1 1 5FFE115B
+P 2850 2000
+F 0 "R9" V 2643 2000 50  0000 C CNN
+F 1 "R120" V 2734 2000 50  0000 C CNN
+F 2 "lead wire" V 2780 2000 50  0001 C CNN
+F 3 "~" H 2850 2000 50  0001 C CNN
+	1    2850 2000
+	0    1    1    0   
+$EndComp
+Connection ~ 3000 1600
+Wire Wire Line
+	2700 2400 3000 2400
+Wire Wire Line
+	2700 1600 3000 1600
+Wire Wire Line
+	1550 2000 1550 1900
+Wire Wire Line
+	1550 1900 1450 1900
+Wire Wire Line
+	1550 2000 2400 2000
+Wire Wire Line
+	1500 1500 4900 1500
+Wire Wire Line
+	1450 2000 1450 2100
+Wire Wire Line
+	1450 2100 2950 2100
+Wire Wire Line
+	2950 2100 2950 2200
+Connection ~ 1450 2100
+Wire Wire Line
+	2950 2200 3050 2200
+Wire Wire Line
+	1450 2200 1450 2300
+Wire Wire Line
+	1450 2200 2100 2200
+Wire Wire Line
+	2100 2200 2100 2550
+Connection ~ 1450 2200
+Wire Wire Line
+	2100 2550 5550 2550
+Wire Wire Line
+	5750 2850 5750 2950
+Connection ~ 5750 2950
+Wire Wire Line
+	5950 2550 6300 2550
+Connection ~ 6300 2550
+Wire Wire Line
+	6300 2550 6300 2950
 $EndSCHEMATC
