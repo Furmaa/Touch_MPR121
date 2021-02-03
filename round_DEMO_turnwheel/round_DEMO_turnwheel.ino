@@ -45,6 +45,7 @@ uint16_t cancellance = 0;
 const uint8_t CANCELLANCE_TH = 1;
 const uint8_t INWARDS_BASE = 100;
 uint16_t slideIntensity = 0;
+float multiplier = 2.0;
 
 // initialize arrays for basline and filtered output values of electrodes
 uint16_t firstbaseline[ELCOUNT] = {0};
@@ -97,7 +98,7 @@ const uint8_t OUTWARDS = 6;
 
 void setup()
 {
-    Serial.begin(9600);
+    Serial.begin(115200);
     Wire.begin();
 
     while (!Serial) { // needed to keep leonardo/micro from starting too fast!
@@ -276,6 +277,7 @@ void loop() {
   {
     slideIntensity = calcSliding(cancellance, &intensity[1], &intensity[ELCOUNT - REFCOUNT - 1], 
     &lastintensity[1], &lastintensity[ELCOUNT - REFCOUNT - 1], &slidingRight, &slidingLeft);
+    slideIntensity *= multiplier;
   
     if (slidingRight) 
     {
@@ -349,8 +351,9 @@ void loop() {
   
   if (count == 0) {
     //printStatus(&cap);
-    Serial.print("Inwards intensity:"); Serial.println(inwardsintensity, DEC);
-    Serial.print("Outwards intensity:"); Serial.println(outwardsintensity, DEC);
+    Serial.print("Multiplier: "); Serial.println(multiplier, DEC);
+    Serial.print("Inwards intensity: "); Serial.println(inwardsintensity, DEC);
+    Serial.print("Outwards intensity: "); Serial.println(outwardsintensity, DEC);
     for (uint8_t i = 0; i < ELCOUNT; i++) {
       Serial.print("Electrode "); Serial.print(i); 
       if (currwake & _BV(i)) {Serial.print(" awake,");}
