@@ -42,7 +42,6 @@ uint8_t k = 0;
 uint16_t inwardsintensity = 0;
 uint16_t outwardsintensity = 0;
 uint16_t cancellance = 0;
-float multiplier = 2;
 const uint8_t CANCELLANCE_TH = 1;
 const uint8_t INWARDS_BASE = 100;
 uint16_t slideIntensity = 0;
