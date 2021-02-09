@@ -121,6 +121,7 @@ public:
   void begin(uint8_t ecr = MPR121_ECR_SETTING_DEFAULT); 
 
   uint16_t filteredData(uint8_t t);
+  uint16_t filteredDataAveraged(uint8_t t, uint8_t n);
   uint16_t baselineData(uint8_t t);
 
   uint8_t readRegister8(uint8_t reg);

@@ -42,6 +42,7 @@ uint8_t k = 0;
 uint16_t inwardsintensity = 0;
 uint16_t outwardsintensity = 0;
 uint16_t cancellance = 0;
+float multiplier = 2;
 const uint8_t CANCELLANCE_TH = 1;
 const uint8_t INWARDS_BASE = 100;
 uint16_t slideIntensity = 0;
@@ -70,7 +71,7 @@ uint8_t blink_count = 0;
 const uint8_t BLINKS = 3;
 const uint8_t BLINK_TICKS = 10;
 const uint8_t PAUSE_TICKS = 20;
-//total turning on time: tick_ON = blink_count * ( blink_ticks + PAUSE_TICKS )
+//total turning on time: tick_ON = BLINKS * ( BLINK_TICKS + PAUSE_TICKS )
 
 // Touch and release debounce values: how many times
 // MPR121 rejects the change of touch and release status.
@@ -97,7 +98,7 @@ const uint8_t OUTWARDS = 6;
 
 void setup()
 {
-    Serial.begin(9600);
+    Serial.begin(115200);
     Wire.begin();
 
     while (!Serial) { // needed to keep leonardo/micro from starting too fast!
@@ -242,7 +243,8 @@ void loop() {
     lastintensity[i] = intensity[i]; // save state for turnwheel slide direction tracking
     if (currwake & _BV(i))
     {
-      filtered[i] = cap.filteredData(i);
+      filtered[i] = cap.filteredDataAveraged(i, 2);
+      Serial.print("filteredDataAveraged: "); Serial.println(filtered[i]);
       currbaseline[i] = cap.baselineData(i);
       if (currbaseline[i] > (filtered[i] + TOUCH)) {intensity[i] = currbaseline[i] - filtered[i] - TOUCH;}
       else {intensity[i] = 0;}     
@@ -270,12 +272,13 @@ void loop() {
     }
   }
     
-  cancellance = intensity[8]*2;
+  cancellance = intensity[8] + intensity[1];
   
   if (turned_on && !turning) 
   {
     slideIntensity = calcSliding(cancellance, &intensity[1], &intensity[ELCOUNT - REFCOUNT - 1], 
     &lastintensity[1], &lastintensity[ELCOUNT - REFCOUNT - 1], &slidingRight, &slidingLeft);
+    slideIntensity *= multiplier;
   
     if (slidingRight) 
     {
@@ -322,7 +325,7 @@ void loop() {
       }
   }
 
-  // PWM duty cycle above 200/255 yields little visible increase in radiance, but increases noise greatly:
+  // PWM duty cycle above 170/255 yields little visible increase in radiance, but increases noise greatly:
   // Let's avoid it!
   if (inwardsintensity >= 170){
     inwardsintensity = 170;
@@ -349,6 +352,7 @@ void loop() {
   
   if (count == 0) {
     //printStatus(&cap);
+    Serial.print("Multiplier:"); Serial.println(multiplier, DEC);
     Serial.print("Inwards intensity:"); Serial.println(inwardsintensity, DEC);
     Serial.print("Outwards intensity:"); Serial.println(outwardsintensity, DEC);
     for (uint8_t i = 0; i < ELCOUNT; i++) {
