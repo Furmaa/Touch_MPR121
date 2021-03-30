@@ -183,7 +183,7 @@ uint16_t Adafruit_MPR121::filteredData(uint8_t t) {
 }
 
 /*!
- *  @brief      Read the filtered data from channel t, n^2 times, and return the average. The ADC raw data outputs
+ *  @brief      Read the filtered data from channel t, 2^n times, and return the average. The ADC raw data outputs
  *              run through 3 levels of digital filtering to filter out the high
  * frequency and low frequency noise encountered. For detailed information on
  * this filtering see page 6 of the device datasheet.
@@ -199,7 +199,7 @@ uint16_t Adafruit_MPR121::filteredDataAveraged(uint8_t t, uint8_t n) {
   for (uint8_t i = 0; i < n2; i++) {
     avg += filteredData(t);
   }
-  avg >> n;
+  avg = avg >> n;
   return avg;
 }
 
