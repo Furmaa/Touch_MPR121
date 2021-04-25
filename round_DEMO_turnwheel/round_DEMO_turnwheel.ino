@@ -139,10 +139,14 @@ void setup()
     //or it might be better to play around with the baseline filter values: 
     // with that the baseline tracking characteristics can be optimized.
     //Overwrite example:
-    cap.writeRegister(MPR121_NCLR, 0x10);
-    cap.writeRegister(MPR121_FDLR, 0xB0);
+    cap.writeRegister(MPR121_MHDR, 0x06);
+    cap.writeRegister(MPR121_NHDR, 0x05);    
+    cap.writeRegister(MPR121_NCLR, 0x0A);
+    cap.writeRegister(MPR121_FDLR, 0x50);
     
-    cap.writeRegister(MPR121_NCLF, 0x10);
+    cap.writeRegister(MPR121_MHDF, 0x06);
+    cap.writeRegister(MPR121_NHDF, 0x01);
+    cap.writeRegister(MPR121_NCLF, 0x20);
     cap.writeRegister(MPR121_FDLF, 0xB0);
     
     cap.writeRegister(MPR121_NHDT, 0x00); 
@@ -244,8 +248,7 @@ void loop() {
     if (currwake & _BV(i))
     {
       filtered[i] = cap.filteredDataAveraged(i, 2);
-      Serial.print("filteredDataAveraged: "); Serial.println(filtered[i]);
-      currbaseline[i] = cap.baselineData(i);
+      /* Serial.print("filteredDataAveraged: "); Serial.println(filtered[i]);*/      currbaseline[i] = cap.baselineData(i);
       if (currbaseline[i] > (filtered[i] + TOUCH)) {intensity[i] = currbaseline[i] - filtered[i] - TOUCH;}
       else {intensity[i] = 0;}     
     }
@@ -271,8 +274,8 @@ void loop() {
       Serial.println("ERROR: this fella has no manners...");
     }
   }
-    
-  cancellance = intensity[8] + intensity[1];
+  
+  cancellance = intensity[8];
   
   if (turned_on && !turning) 
   {
