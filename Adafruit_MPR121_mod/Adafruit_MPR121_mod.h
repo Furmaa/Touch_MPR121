@@ -1,5 +1,5 @@
 /*!
- *  @file Adafruit_MPR121.h
+ *  @file Adafruit_MPR121_mod.h
  *
  *  This is a library for the MPR121 12-Channel Capacitive Sensor
  *
@@ -17,6 +17,8 @@
  *  Limor Fried/Ladyada (Adafruit Industries).
  *
  *  BSD license, all text above must be included in any redistribution
+ * 
+ *  Modified in 2020 by Aron Furmann/Furmaa for Fraunhofer IZM
  */
 
 #ifndef ADAFRUIT_MPR121_H
@@ -109,15 +111,17 @@ enum {
  *  @brief  Class that stores state and functions for interacting with MPR121
  *  proximity capacitive touch sensor controller.
  */
-class Adafruit_MPR121 {
+class Adafruit_MPR121_mod 
+{
 public:
   ///< Hardware I2C
-  Adafruit_MPR121();
+  Adafruit_MPR121_mod();
 
   void open(uint8_t i2caddr = MPR121_I2CADDR_DEFAULT, 
                 TwoWire *theWire = &Wire);
   boolean init( uint8_t touchThreshold = MPR121_TOUCH_THRESHOLD_DEFAULT, 
-                uint8_t releaseThreshold = MPR121_RELEASE_THRESHOLD_DEFAULT);
+                uint8_t releaseThreshold = MPR121_RELEASE_THRESHOLD_DEFAULT,
+                bool autoconfigEnabled = true);
   void begin(uint8_t ecr = MPR121_ECR_SETTING_DEFAULT); 
 
   uint16_t filteredData(uint8_t t);
@@ -133,10 +137,49 @@ public:
       __attribute__((deprecated));
   void setThresholds(uint8_t touch, uint8_t release);
 
+  /* added by Furmaa */
+  uint8_t pauseTicks; /* number of timer overflows while LEDs OFF in turning ON routine */  
+  uint8_t offTicks;   /* number of timer overflows while LEDs ON in turning OFF routine */
+  uint8_t onBlinks;   /* number of LED ON-OFF changes in turning ON routine             */
 
-private:
+  void printStatus(void);
+  void calcStatistic (uint8_t eleccount, uint8_t factor);
+  uint8_t manners (volatile bool turnedon, 
+                   volatile bool * turn, 
+                   volatile uint8_t * ticks, 
+                   uint16_t * in_intensity, 
+                   uint16_t * out_intensity, 
+                   uint8_t * blinkcount);
+
+protected:
   int8_t _i2caddr;
   TwoWire *_wire;
+};
+
+class TurnwheelDEMO : public Adafruit_MPR121_mod
+{
+  public:
+    TurnwheelDEMO();
+    uint16_t calcSliding(uint16_t cancelval, 
+                       uint16_t * intstart, 
+                       uint16_t * intend, 
+                       uint16_t * lastintstart, 
+                       uint16_t * lastintend, 
+                       bool * rightslide, 
+                       bool * leftslide);
+};
+
+class SinusDEMO : public Adafruit_MPR121_mod
+{
+  public:
+    SinusDEMO();
+    void blink (uint8_t * blinkcount, 
+                volatile uint8_t * ticks,  
+                uint16_t * in_intensity,  
+                uint16_t * out_intensity, 
+                uint8_t pausetime, 
+                uint8_t blinktime, 
+                uint8_t maxintensity); 
 };
 
 #endif
