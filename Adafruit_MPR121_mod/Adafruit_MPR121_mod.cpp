@@ -436,6 +436,10 @@ uint8_t Adafruit_MPR121_mod::manners (volatile bool turnedon,
     Serial.println("Turning off!"); 
     retval = 0u;
   }
+  else if (*turn)
+  {
+    retval = 0u;
+  }
   else 
   {
     /* Do nothing */
@@ -565,50 +569,4 @@ uint16_t TurnwheelDEMO::calcSliding(uint16_t cancelval,
     }
 
   return slideval;
-}
-
-/*!
- *  @brief      Default constructor
- */
-SinusDEMO::SinusDEMO() {}
-
-/*!
- *  @brief      Sets internal flags and light intensity values for Sinewave DEMO blinking
- *  @param      blinkcount 
- *              pointer to blink counter
- *  @param      ticks 
- *              pointer to timer overflow counter
- *  @param      in_intensity
- *              pointer to inwards light intensity
- *  @param      out_intensity 
- *              pointer to outwards light intensity
- *  @param      pausetime
- *              for how many timer overflows are LEDs OFF
- *  @param      blinktime 
- *              for how many timer overflows are LEDs ON
- *  @param      maxintensity 
- *              light intensity when LEDs are ON
- */
-void SinusDEMO::blink (uint8_t * blinkcount, 
-                   volatile uint8_t * ticks,  
-                   uint16_t * in_intensity,  
-                   uint16_t * out_intensity, 
-                   uint8_t pausetime, 
-                   uint8_t blinktime, 
-                   uint8_t maxintensity) 
-{
-  if ( (*blinkcount) > 0) {
-    if ( ( (*blinkcount) % 2 ) == 0 ) {
-        (*in_intensity) = maxintensity; 
-        (*out_intensity) = maxintensity; 
-        (*ticks) = blinktime; 
-        (*blinkcount)--;
-        }
-      else {
-        (*in_intensity) = 0; 
-        (*out_intensity) = 0; 
-        (*ticks) = pausetime; 
-        (*blinkcount)--;
-        }
-  }
 }

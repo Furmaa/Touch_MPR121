@@ -169,17 +169,4 @@ class TurnwheelDEMO : public Adafruit_MPR121_mod
                        bool * leftslide);
 };
 
-class SinusDEMO : public Adafruit_MPR121_mod
-{
-  public:
-    SinusDEMO();
-    void blink (uint8_t * blinkcount, 
-                volatile uint8_t * ticks,  
-                uint16_t * in_intensity,  
-                uint16_t * out_intensity, 
-                uint8_t pausetime, 
-                uint8_t blinktime, 
-                uint8_t maxintensity); 
-};
-
 #endif

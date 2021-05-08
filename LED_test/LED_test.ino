@@ -1,3 +1,5 @@
+#include "Arduino.h"
+
 // Definition of the LED control pins, see schematics.
 const uint8_t Drive1 =  10;      
 const uint8_t Drive2 = 6;       

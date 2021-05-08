@@ -20,6 +20,12 @@ BSD license, all text above must be included in any redistribution
 /*****************************************************************************/
 /** General application setup ************************************************/
 
+#ifdef _LOGGING_
+#undef _LOGGING_
+#endif /** _LOGGING_ */
+/** comment out next line to enable logging to terminal */
+/* #define _LOGGING_ */
+
 /** Light intensity scaling */
 #define MULTIPLIER 2.0f
 
@@ -235,15 +241,19 @@ void loop() {
   currtouched = cap.touched();
   currwake = 0;
   
-  for (uint8_t i=0; i<ELCOUNT; i++) {
-    // it if *is* touched and *wasnt* touched before, alert!
+  for (uint8_t i=0; i<ELCOUNT; i++) 
+  {
+
+    #ifdef _LOGGING_
+    /** it if *is* touched and *wasnt* touched before, alert! */
     if ((currtouched & _BV(i)) && !(lasttouched & _BV(i)) ) {
       Serial.print(i); Serial.print(" touched! Reading:"); Serial.println(cap.filteredData(i));
     }
-    // if it *was* touched and now *isnt*, alert!
+    /** if it *was* touched and now *isnt*, alert! */
     if (!(currtouched & _BV(i)) && (lasttouched & _BV(i)) ) {
       Serial.print(i); Serial.print(" released! Reading:");Serial.println(cap.filteredData(i));
     }
+    #endif /** _LOGGING_ */
 
     if (currtouched & _BV(i)) {
       currwake |= _BV(i);
@@ -275,9 +285,18 @@ void loop() {
     if (currwake & _BV(i))
     {
       filtered[i] = cap.filteredDataAveraged(i, 2);
-      /* Serial.print("filteredDataAveraged: "); Serial.println(filtered[i]);*/      currbaseline[i] = cap.baselineData(i);
-      if (currbaseline[i] > (filtered[i] + TOUCH)) {intensity[i] = currbaseline[i] - filtered[i] - TOUCH;}
-      else {intensity[i] = 0;}     
+      #ifdef _LOGGING_ 
+      Serial.print("filteredDataAveraged: "); Serial.println(filtered[i]);
+      #endif /** _LOGGING_ */
+      currbaseline[i] = cap.baselineData(i);
+      if (currbaseline[i] > (filtered[i] + TOUCH)) 
+      {
+        intensity[i] = currbaseline[i] - filtered[i] - TOUCH;
+      }
+      else 
+      {
+        intensity[i] = 0;
+      }       
     }
     else
     {
@@ -285,12 +304,14 @@ void loop() {
     }
   }
 
-  // ON/OFF as the 0th electrode is touched
+  /* ON/OFF as the 0th electrode is touched */
   if ( (currtouched & _BV(0)) && !(lasttouched & _BV(0)) && !(currtouched & ~_BV(0)) )
   {
     if (cap.manners(turned_on, &turning, &ticking, &inwardsintensity, &outwardsintensity, &blink_count)) 
     {
+      #ifdef _LOGGING_ 
       Serial.println("ERROR: this fella has no manners...");
+      #endif /** _LOGGING_ */
     }
   }
   
@@ -377,6 +398,7 @@ void loop() {
     analogWrite(OUTWARDS, outwardsintensity);
   }
   
+  #ifdef _LOGGING_
   if (count == 0) {
     /* comment out next line to print all config + electrode registers to terminal */
     /*cap.printStatus(); */ 
@@ -397,6 +419,7 @@ void loop() {
     count = 2000;
   }
   count--;
+  #endif /** _LOGGING_ */
   
   // reset our state
   lasttouched = currtouched;

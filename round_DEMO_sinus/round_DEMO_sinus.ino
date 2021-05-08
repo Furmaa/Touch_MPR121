@@ -26,9 +26,6 @@ BSD license, all text above must be included in any redistribution
 /** comment out next line to enable logging to terminal */
 /* #define _LOGGING_ */
 
-/** Light intensity scaling */
-#define MULTIPLIER 2.0f
-
 /** Serial communication setup */
 #define BAUDRATE 115200l
 
@@ -46,8 +43,8 @@ BSD license, all text above must be included in any redistribution
 /** Change touch and release thresholds from default if needed in range 0-255
   * Touch condition: Baseline - filtered output > touch threshold
   * Release condition: Baseline - filtered output < release threshold */
-#define TOUCH   3u
-#define RELEASE 2u
+#define TOUCH   6u
+#define RELEASE 3u
 /** default values: 
   *  MPR121_TOUCH_THRESHOLD_DEFAULT
   *  MPR121_RELEASE_THRESHOLD_DEFAULT
@@ -79,20 +76,17 @@ const uint8_t ECR = MPR121_BL_TRACKING_ALL + MPR121_ELEPROX_EN_OFF + ELCOUNT;
 /*****************************************************************************/
 /** Application specific setup ***********************************************/
 
-/** sinewave pulsatance */
-#define OMMAX (float)(PI/TICKSEC*2u)  
-#define OMMIN (float)(PI/TICKSEC/8u)
-#define HALFPULSEWIDTH 1u
+/** sinewave pulsatance change step */
+#define OM_STEP (float)(PI/TICKSEC/4u)
 
-/** light intensity boundaries and change step */
-#define INTENSITY_UPPER  200u
-#define INTENSITY_LOWER  20u  
+/** light intensity change step */
 #define INTENSITYSTEP    30u 
 
-/** intermittent pulse */ 
+/** intermittent pulses -- "stroboscope" */ 
 #define PULSE1_POS (float)( PI/3u )
 #define PULSE2_POS (float)( PI/2u )
 #define PULSE3_POS (float)( 2u*PI/3u)
+#define HALFPULSEWIDTH (float)(PI/16u)
 
 /** light intensity offset */
 #define OFFSET 0u
@@ -105,32 +99,39 @@ const uint8_t ECR = MPR121_BL_TRACKING_ALL + MPR121_ELEPROX_EN_OFF + ELCOUNT;
 #define SOFTWARE_SUBVERSION 0
 #define SOFTWARE_NAME "Sinewave DEMO"
 
+/** sinewave pulsatance */
+#define OMMAX (float)(PI/TICKSEC*4u)  
+#define OMMIN (float)(PI/TICKSEC/2u)
+
+/** light intensity boundaries */
+#define INTENSITY_UPPER  200u
+#define INTENSITY_LOWER  20u  
+
 /** Internal Variables */
 
 /** timing of status print */
 uint16_t count = 0;
 
 /** You can have up to 4 on one i2c bus. */
-SinusDEMO cap = SinusDEMO();
+Adafruit_MPR121_mod cap = Adafruit_MPR121_mod();
 
-/** Keeping track of the timer overflow interrupts. */
-uint8_t firsttick = false;
-
-/** pressbuton states */
-const uint8_t BUTTONS = 3;
-bool PRESSED[BUTTONS] = {false, false, false};
-bool * const PRESSEDp = PRESSED;
-bool * const SINEWAVE_OUT = &PRESSED[0];
-bool * const SINEWAVE_IN = &PRESSED[1];
-bool * const INTERMITT = &PRESSED[2];
-bool sineend = true; // end of sinus wave flag
+/** states */
+bool sinewave_out = true;
+bool sinewave_in = true;
+bool intermitt = true;
+bool sinestart_in = false; // start of sinus wave flag
+bool sinestart_out = false; // start of sinus wave flag
 
 float om = OMMAX;
-double sinintensity = 0;
-uint8_t pulse1_tick = 0;
-uint8_t pulse2_tick = 0;
-uint8_t pulse3_tick = 0;
-uint8_t intermitick = 0;
+float phase = 0;
+uint8_t sinetime = 0;
+float sinintensity = 0;
+const float pulse1_upperBound = (float)(PULSE1_POS + HALFPULSEWIDTH);
+const float pulse1_lowerBound = (float)(PULSE1_POS - HALFPULSEWIDTH);
+const float pulse2_upperBound = (float)(PULSE2_POS + HALFPULSEWIDTH);
+const float pulse2_lowerBound = (float)(PULSE2_POS - HALFPULSEWIDTH);
+const float pulse3_upperBound = (float)(PULSE3_POS + HALFPULSEWIDTH);
+const float pulse3_lowerBound = (float)(PULSE3_POS - HALFPULSEWIDTH);
 
 // Keeps track of the last pins touched
 // so we know when buttons are 'released'
@@ -341,7 +342,9 @@ void loop() {
   {
     if (cap.manners(turned_on, &turning, &ticking, &inwardsintensity, &outwardsintensity, &blink_count)) 
     {
+      #ifdef _LOGGING_
       Serial.println("ERROR: this fella has no manners...");
+      #endif /** _LOGGING_ */
     }
   }
 
@@ -352,7 +355,8 @@ void loop() {
     cancellance += intensity[ELCOUNT - 1 - i];
   }
   
-  if (turned_on && !turning) {
+  if (turned_on && !turning) 
+  {
     /** different light shows for electrodes 1...7 */
 
     /** 1st electrode: increasing light intensity */
@@ -372,9 +376,9 @@ void loop() {
       }
 /*       turning = true;
       blink_count = 4; */
-      if (!(*SINEWAVE_IN) && !(*SINEWAVE_OUT)) {
-        *SINEWAVE_IN = true;
-        *SINEWAVE_OUT = true;
+      if (!(sinewave_in) && !(sinewave_out)) {
+        sinewave_in = true;
+        sinewave_out = true;
       }    
     }
 
@@ -389,26 +393,37 @@ void loop() {
       else {intensitylvl = INTENSITY_LOWER; Serial.print("Intensity at minimum: "); Serial.println(intensitylvl);}
 /*       turning = true;
       blink_count = 2; */
-      if (!(*SINEWAVE_IN) && !(*SINEWAVE_OUT)) {
-        *SINEWAVE_IN = true;
-        *SINEWAVE_OUT = true;
+      if (!(sinewave_in) && !(sinewave_out)) {
+        sinewave_in = true;
+        sinewave_out = true;
       }
     }
 
       /** 3rd electrode: sinus light outwards */
-    else if ( (currtouched & _BV(3)) && !(lasttouched & _BV(3)) && !(currtouched & ~_BV(3)) ) { //only the 3th electrode has been touched 
-      (*SINEWAVE_OUT) = !(*SINEWAVE_OUT);
-       }
+    else if ( (currtouched & _BV(3)) && !(lasttouched & _BV(3)) && !(currtouched & ~_BV(3)) ) 
+    { //only the 3th electrode has been touched 
+      (sinewave_out) = !(sinewave_out);
+      if (!sinewave_out)
+      {
+        sinestart_out = false; 
+      }
+    }
 
       /** 4th electrode: sinus light inwards */
-    else if ( (currtouched & _BV(4)) && !(lasttouched & _BV(4)) && !(currtouched & ~_BV(4)) ) { //only the 4th electrode has been touched 
-      (*SINEWAVE_IN) = !(*SINEWAVE_IN);
-       }
+    else if ( (currtouched & _BV(4)) && !(lasttouched & _BV(4)) && !(currtouched & ~_BV(4)) ) 
+    { //only the 4th electrode has been touched 
+      (sinewave_in) = !(sinewave_in);
+      if (!sinewave_in)
+      {
+        sinestart_in = false; 
+      }
+    }
 
       /** 5th electrode: increasing frequency of sine wave */
     else if ( (currtouched & _BV(5)) && !(lasttouched & _BV(5)) && !(currtouched & ~_BV(5)) ) { //only the 5th electrode has been touched 
-      if ( ((double)(2*OMMAX)) >= om) {
-        om *= 2; 
+      if ( OMMAX >= (om + OM_STEP)) 
+      {
+        om += OM_STEP; 
         #ifdef _LOGGING_
         Serial.print("Frequency increased: "); Serial.println(om);
         #endif /** _LOGGING_ */
@@ -420,21 +435,19 @@ void loop() {
         #endif /** _LOGGING_ */  
       }
 
-      pulse1_tick = (uint8_t) ( (double)(PULSE1_POS / om) );
-      pulse2_tick = (uint8_t) ( (double)(PULSE2_POS / om) );
-      pulse3_tick = (uint8_t) ( (double)(PULSE3_POS / om) );
-
-      if (!(*SINEWAVE_IN) && !(*SINEWAVE_OUT)) {
-        *SINEWAVE_IN = true;
-        *SINEWAVE_OUT = true;
-        *INTERMITT = true;
+      if (!(sinewave_in) && !(sinewave_out)) 
+      {
+        sinewave_in = true;
+        sinewave_out = true;
+        intermitt = true;
       }
     }
 
     /** 6th electrode: decreasing frequency of for sine wave */
     else if ( (currtouched & _BV(6)) && !(lasttouched & _BV(6)) && !(currtouched & ~_BV(6)) ) { //only the 6h electrode has been touched 
-      if (om >= ((double)(OMMIN*2))) {
-        om /= 2; 
+      if (om >= (OMMIN + OM_STEP)) 
+      {
+        om -= OM_STEP; 
         #ifdef _LOGGING_
         Serial.print("Frequency decreased: "); Serial.println(om);
         #endif /** _LOGGING_ */
@@ -446,91 +459,159 @@ void loop() {
         #endif /** _LOGGING_ */
       }
 
-      pulse1_tick = (uint8_t) ( (double)(PULSE1_POS / om) );
-      pulse2_tick = (uint8_t) ( (double)(PULSE2_POS / om) );
-      pulse3_tick = (uint8_t) ( (double)(PULSE3_POS / om) );
-
-      if (!(*SINEWAVE_IN) && !(*SINEWAVE_OUT)) {
-        *SINEWAVE_IN = true;
-        *SINEWAVE_OUT = true;
-        *INTERMITT = true;
+      if (!(sinewave_in) && !(sinewave_out)) 
+      {
+        sinewave_in = true;
+        sinewave_out = true;
+        intermitt = true;
       }
      }
       /** 7th electrode: */ 
     else if (  (currtouched & _BV(7)) && !(lasttouched & _BV(7)) && !(currtouched & ~_BV(7)) ) { //only the 7th electrode has been touched 
-      (*INTERMITT) = !(*INTERMITT);
+      (intermitt) = !(intermitt);
     }
   } 
-  
-  else if (!turned_on && !turning)
-  {
+  else if (!turned_on && !turning) /** while OFF */
+  { 
     inwardsintensity = 0;
     outwardsintensity = 0;
   }
   else if (turned_on && turning) //&& (ticking == 0)) /**while turning off... */
   {
-    inwardsintensity = INTENSITY_UPPER;
-    outwardsintensity = INTENSITY_UPPER;
+    inwardsintensity = 255;
+    outwardsintensity = 255;
   }
-  
-  else if (turning && !turned_on && (ticking == 0) && firsttick) /** while turning on... */
+  else if (!turned_on && turning && (ticking == 0)) /**while turning on...*/
   { 
-/*    inwardsintensity = ~(inwardsintensity|0);
-   outwardsintensity = ~(outwardsintensity|0); */
-    cap.blink(&blink_count, &ticking, &inwardsintensity, &outwardsintensity, PAUSE_TICKS, BLINK_TICKS, intensitylvl);
-    firsttick = false;
+    if ((blink_count % 2) == 0) {
+      inwardsintensity = 255; 
+      outwardsintensity = 255; 
+      ticking = BLINK_TICKS; 
+      blink_count--;
+      }
+    else {
+      inwardsintensity = 0; 
+      outwardsintensity = 0; 
+      ticking = PAUSE_TICKS; 
+      blink_count--;
+      }
   }
   
- if (((*SINEWAVE_OUT || *SINEWAVE_IN) || !sineend) && turned_on && !turning) {
-    sineend = false;
-    sinintensity = (double) ( (intensitylvl - OFFSET) * sin( (float)(om*ticking) ) );
+  if ((sinewave_out || sinewave_in) && turned_on && !turning) 
+  {
+    sinetime = 0xFFu - ticking;
+    phase = (float) om*sinetime;
+    sinintensity = (float) ( (intensitylvl - OFFSET) * sin(phase) );
     sinintensity = abs(sinintensity);
-    if (*SINEWAVE_OUT || (sineend && (outwardsintensity!=0))) 
+    #ifdef _LOGGING_
+      Serial.print("Phase: "); Serial.println(phase);
+    #endif /** _LOGGING_ */
+
+    if (phase < PI)
     {
-      outwardsintensity = (uint16_t) sinintensity;
-    }
-    if (*SINEWAVE_IN || (sineend && (inwardsintensity!=0))) 
-    {
-        inwardsintensity = (uint16_t) sinintensity;
-    }
-    if (*INTERMITT) {
-      if (firsttick) {intermitick++; firsttick = false;}
-      if ( ((intermitick >= (pulse1_tick-HALFPULSEWIDTH)) && (intermitick <= (pulse1_tick+HALFPULSEWIDTH) )) || 
-      ((intermitick >= (pulse2_tick-HALFPULSEWIDTH)) && (intermitick <= (pulse2_tick+HALFPULSEWIDTH) )) || 
-      ((intermitick >= (pulse3_tick-HALFPULSEWIDTH)) && (intermitick <= (pulse3_tick+HALFPULSEWIDTH) )) )
+      inwardsintensity = 0;
+      if (sinewave_out && sinestart_out) 
       {
-        inwardsintensity = 0;
+        outwardsintensity = (uint16_t) sinintensity;
+      } 
+      else
+      {
         outwardsintensity = 0;
       }
-      else if (intermitick > (pulse3_tick+HALFPULSEWIDTH)) {intermitick = 0;}
+    }
+    else if (phase < 2*PI)
+    {
+      outwardsintensity = 0;
+      if (sinewave_in && sinestart_in) 
+      {
+        inwardsintensity = (uint16_t) sinintensity;
+      }
+      else
+      {
+        inwardsintensity = 0;
+      }
+    }
+    else
+    {
+      inwardsintensity = 0;
+      outwardsintensity = 0;
+      ticking = 0xFFu;
+      if (sinewave_in)
+      {
+        sinestart_in = true;  
+      }
+      else
+      {
+        /** Do Nothing */
+      } 
+      if (sinewave_out)
+      {
+        sinestart_out = true;  
+      }
+      else
+      {
+        /** Do Nothing */
+      } 
     }
 
-    if (!ticking) {ticking = (uint8_t) (TICKSEC<<2); sineend = true;}
-  }
+    if (intermitt) 
+    {
+      if (phase <= pulse1_upperBound) 
+      {
+        if (phase >= pulse1_lowerBound)
+        {
+          inwardsintensity = 0;
+          outwardsintensity = 0;
+        }
+        else        
+        {
+          /** Do Nothing */
+        }
+      }
+      else if (phase <= pulse2_upperBound) 
+      {
+        if (phase >= pulse2_lowerBound)
+        {
+          inwardsintensity = 0;
+          outwardsintensity = 0;
+        }
+        else
+        {
+          /** Do Nothing */
+        }
 
-  if (inwardsintensity > INTENSITY_UPPER){
-    inwardsintensity = INTENSITY_UPPER;
-  }
-  else if (inwardsintensity < INTENSITY_LOWER){
-    inwardsintensity = 0;
-  }
-
-  if (outwardsintensity > INTENSITY_UPPER){
-    outwardsintensity = INTENSITY_UPPER;
-  }
-  else if (outwardsintensity < INTENSITY_LOWER){
-    outwardsintensity = 0;
+      }
+      else if (phase <= pulse3_upperBound)
+      {
+        if (phase >= (pulse3_lowerBound))
+        {
+          inwardsintensity = 0;
+          outwardsintensity = 0;
+        }
+        else        
+        {
+          /** Do Nothing */
+        }
+      } 
+      else        
+      {
+        /** Do Nothing */
+      }
+    }
+    else        
+    {
+      /** Do Nothing */
+    }
   }
 
   analogWrite(OUTWARDS, outwardsintensity);
   analogWrite(INWARDS, inwardsintensity);
 
-#ifdef _LOGGING_
-if (count == 0) {
+  #ifdef _LOGGING_
+  if (count == 0) {
     /** comment out next line to print all config + electrode registers to terminal */
     /*cap.printStatus(); */ 
 
-    Serial.print("multiplier: "); Serial.println(MULTIPLIER, DEC);
     Serial.print("Inwards intensity: "); Serial.println(inwardsintensity, DEC);
     Serial.print("Outwards intensity: "); Serial.println(outwardsintensity, DEC);
     for (uint8_t i = 0; i < ELCOUNT; i++) {
@@ -561,6 +642,10 @@ ISR(TIMER2_OVF_vect)          /** timer overflow interrupt service routine */
     Serial.print("ticking: "); 
     Serial.println(ticking); */
     }
+  else
+  {
+    /** Do nothing */
+  }
   
   if ((ticking == 0) && turned_on && turning) {
     turned_on = 0;
@@ -571,5 +656,9 @@ ISR(TIMER2_OVF_vect)          /** timer overflow interrupt service routine */
     turned_on = 1;
     turning = 0;
     /* Serial.println("Turned on."); */ 
+  }
+  else
+  {
+    /** Do nothing */
   }
 }
